@@ -3,113 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Live Collaborative Workspace</title>
+    <title>Instant Live Collaborative Workspace</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
         body { font-family: 'Inter', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
         
-        /* Sync Status Banner */
-        #statusBanner { background: #f59e0b; color: white; padding: 6px; text-align: center; font-size: 12px; font-weight: 600; display: block; letter-spacing: 0.5px; }
-        #statusBanner.connected { background: #10b981; }
+        #statusBanner { background: #10b981; color: white; padding: 6px; text-align: center; font-size: 12px; font-weight: 600; display: block; letter-spacing: 0.5px; }
 
         .app-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* Sidebars */
         .sidebar { width: 300px; background: #ffffff; padding: 20px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 16px; box-shadow: 2px 0 10px rgba(0,0,0,0.01); z-index: 10; overflow-y: auto; }
         .right-sidebar { width: 300px; background: #ffffff; padding: 20px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto; z-index: 10; }
         
-        /* Main Workspace */
         .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background-image: radial-gradient(#cbd5e1 1px, transparent 0); background-size: 20px 20px; }
         .workspace { flex: 1; padding: 30px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; }
         
         .image-container { position: relative; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); background: white; border-radius: 6px; display: none; border: 1px solid #cbd5e1; }
         .image-container img { max-width: 100%; display: block; border-radius: 6px; pointer-events: none; }
         
-        /* Live Text Layers */
         #textLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .text-overlay { position: absolute; padding: 4px 8px; font-weight: 700; cursor: move; border: 1px dashed transparent; min-width: 40px; background: transparent; pointer-events: auto; white-space: nowrap; border-radius: 4px; }
-        .text-overlay:focus, .text-overlay.active { outline: none; border: 1px dashed #2563eb; background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .text-author { position: absolute; bottom: -14px; left: 0; font-size: 9px; background: #2563eb; color: white; padding: 1px 4px; border-radius: 3px; font-weight: 500; display: none; pointer-events: none; }
+        .text-overlay:focus, .text-overlay.active { outline: none; border: 1px dashed #6366f1; background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .text-author { position: absolute; bottom: -14px; left: 0; font-size: 9px; background: #6366f1; color: white; padding: 1px 4px; border-radius: 3px; font-weight: 500; display: none; pointer-events: none; }
         .text-overlay.active .text-author, .text-overlay:hover .text-author { display: block; }
         
-        /* Active Presence List */
         .user-badge { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
         .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #10b981; }
         
         h3 { font-size: 12px; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 0.5px; font-weight: 700; }
         .input-group { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
-        input[type="text"], input[type="number"], select, input[type="file"] { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 13px; transition: all 0.2s; }
-        input[type="text"]:focus { border-color: #2563eb; outline: none; }
+        input[type="text"], input[type="number"], select, input[type="file"] { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 13px; }
         input[type="color"] { width: 42px; height: 34px; padding: 0; border: 1px solid #cbd5e1; cursor: pointer; border-radius: 6px; background: none; }
         
-        .btn { padding: 8px 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 13px; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 4px; }
-        .btn:hover { background: #1d4ed8; }
-        .btn.outline { background: transparent; border: 1px solid #2563eb; color: #2563eb; }
-        .btn.outline:hover { background: #eff6ff; }
-        .btn.secondary { background: #e2e8f0; color: #334155; }
-        .btn.secondary:hover { background: #cbd5e1; }
+        .btn { padding: 8px 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 13px; display: flex; justify-content: center; align-items: center; }
+        .btn:hover { background: #4f46e5; }
+        .btn.outline { background: transparent; border: 1px solid #6366f1; color: #6366f1; }
+        .btn.outline:hover { background: #e0e7ff; }
         
-        /* Directory Cards */
         .folder-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; position: relative; }
         .folder-item:hover { border-color: #94a3b8; background: #f1f5f9; }
-        .folder-item.active { background: #eff6ff; border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1); }
+        .folder-item.active { background: #e0e7ff; border-color: #6366f1; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1); }
         .folder-name { font-weight: 600; font-size: 13px; color: #0f172a; margin-bottom: 4px; width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 3px; }
-        .badge { background: #e0f2fe; color: #0284c7; padding: 1px 4px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+        .badge { background: #e0e7ff; color: #4f46e5; padding: 1px 4px; border-radius: 4px; font-weight: 600; font-size: 10px; }
         
         .delete-btn { position: absolute; top: 12px; right: 12px; background: #fee2e2; color: #ef4444; border: none; padding: 4px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; }
         .delete-btn:hover { background: #fecaca; color: #b91c1c; }
-
         hr { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
     </style>
 </head>
 <body>
 
-<div id="statusBanner">⚠️ RUNNING IN DEMO MODE (LOCAL). PALITAN ANG FIREBASE CONFIG PARA MAGING LIVE ONLINE SYNC!</div>
+<div id="statusBanner">🌐 INSTANT SYNC LIVE ONLINE MODE (NO CONFIG REQUIRED)</div>
 
 <div class="app-container">
     <div class="sidebar">
         <div>
             <h3>👥 Active Team Online</h3>
-            <div id="onlineUsersList">
-                </div>
+            <div id="onlineUsersList"></div>
             <div class="input-group" style="margin-top: 8px;">
-                <select id="editorSelect"><option value="Jomari (Owner)">Jomari (Owner)</option></select>
+                <select id="editorSelect"><option value="Jomari">Jomari</option></select>
             </div>
             <div class="input-group">
-                <input type="text" id="newEditorInput" placeholder="Add team member...">
-                <button class="btn outline" id="addEditorBtn">Join</button>
+                <input type="text" id="newEditorInput" placeholder="Type your name...">
+                <button class="btn outline" id="addEditorBtn">Join Team</button>
             </div>
         </div>
         <hr>
-        
         <div>
-            <h3>📁 Upload New Resource</h3>
+            <h3>📁 Upload Resource</h3>
             <input type="file" id="fileUpload" accept="image/png, image/jpeg, application/pdf">
         </div>
         <hr>
-
         <div>
-            <h3>🛠️ Live Styling Engine</h3>
+            <h3>🛠️ Text Style</h3>
             <div class="input-group">
-                <input type="color" id="textColor" value="#2563eb" title="Text Color">
-                <input type="number" id="textSize" value="20" min="12" max="120" title="Font Size">
-                <button class="btn outline" id="applyStyleBtn">Style</button>
+                <input type="color" id="textColor" value="#6366f1" title="Text Color">
+                <input type="number" id="textSize" value="22" min="12" max="120" title="Font Size">
+                <button class="btn outline" id="applyStyleBtn">Apply</button>
             </div>
         </div>
         <hr>
-
         <div>
-            <h3>💾 Master Export System</h3>
+            <h3>💾 Master Export</h3>
             <div class="input-group">
                 <select id="exportFormat">
                     <option value="png">PNG Image</option>
@@ -123,7 +107,7 @@
 
     <div class="main-area">
         <div class="workspace" id="workspace">
-            <h2 id="noFileText" style="color: #94a3b8; font-weight: 400; font-size: 16px;">Waiting for online project synchronization...</h2>
+            <h2 id="noFileText" style="color: #94a3b8; font-weight: 400; font-size: 16px;">Select or Upload a file from the Cloud Directory to start collaborating!</h2>
             <div class="image-container" id="imageContainer">
                 <img id="mainImage" src="" alt="Live Synchronized Panel">
                 <div id="textLayer"></div>
@@ -132,41 +116,25 @@
     </div>
 
     <div class="right-sidebar">
-        <h3>☁️ Cloud File Directory</h3>
+        <h3>☁️ Live Project Directory</h3>
         <div id="directoryList"></div>
     </div>
 </div>
 
 <script>
-    // --- CONNECTING TO FIREBASE (PALITAN MO ITO PARA MAGING LIVE ONLINE SYNC) ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyBaQ5dEw-s2K2gBdZG4CGPD2pn1cLIZ64M",
-        authDomain: "help-start-e6025.firebaseapp.com",
-        databaseURL: "YOUR_DATABASE_URL",
-        projectId: "help-start-e6025",
-        storageBucket: "help-start-e6025.firebasestorage.app",
-        messagingSenderId: "30156186075",
-        appId: "1:30156186075:web:b79c0a404a3de2c2cb07fe"
-    };
+    // --- AUTOMATIC PEER-TO-PEER NETWORK INITIALIZATION ---
+    // Kumokonekta ito sa mga pampublikong GunDB nodes para mag-sync nang walang account.
+    const gun = Gun([
+        'https://gun-manhattan.herokuapp.com/gun',
+        'https://relay.peer.ooo/gun'
+    ]);
+    
+    // Ito ang magiging sikretong kwarto ng team ninyo. Pwede mong palitan ang pangalan kung gusto mo.
+    const room = gun.get('jomari_shared_workspace_global_2026');
 
-    let database = null;
-    let isOnlineMode = false;
-
-    // Check kung pinalitan na ni Jomari ang placeholders
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        database = firebase.database();
-        isOnlineMode = true;
-        const banner = document.getElementById('statusBanner');
-        banner.innerText = "🌐 LIVE ONLINE MODE (SYNCHRONIZED)";
-        banner.className = "connected";
-    }
-
-    // --- SYSTEM STATES (LOCAL FALLBACKS) ---
-    let localFilesData = [];
-    let localTexts = {};
+    let filesMap = {};
     let activeFileId = null;
-    let currentUser = "Jomari (Owner)";
+    let currentUser = "Jomari";
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -187,72 +155,66 @@
         onlineUsersList: document.getElementById('onlineUsersList')
     };
 
-    // --- PRESENCE SYSTEM (SINO ANG GUMAGAWA) ---
-    function updatePresence() {
-        currentUser = els.editorSelect.value;
-        if (isOnlineMode) {
-            const userRef = database.ref('presence/' + currentUser.replace(/[.#$\[\]]/g, ""));
-            userRef.set({ name: currentUser, lastActive: Date.now() });
-            userRef.onDisconnect().remove();
-        } else {
-            renderLocalPresence();
-        }
+    // --- REALTIME PRESENCE (SINO ANG ONLINE) ---
+    function heartbeat() {
+        room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() });
     }
+    setInterval(heartbeat, 3000); // Sabihin sa network bawat 3 segundo na online ka
+    heartbeat();
 
-    if (isOnlineMode) {
-        database.ref('presence').on('value', (snapshot) => {
-            els.onlineUsersList.innerHTML = '';
-            snapshot.forEach((child) => {
-                const user = child.val();
-                els.onlineUsersList.innerHTML += `<div class="user-badge"><span class="status-dot"></span> ${user.name}</div>`;
-            });
-        });
-    } else {
-        function renderLocalPresence() {
-            els.onlineUsersList.innerHTML = `<div class="user-badge"><span class="status-dot"></span> ${currentUser}</div>`;
+    room.get('presence').map().on((user, name) => {
+        if (!user) return;
+        // Kapag hindi nagparamdam ng higit sa 8 segundo, ituring na offline
+        if (Date.now() - user.time > 8000) {
+            const node = document.getElementById('user_' + name.replace(/\s/g, ''));
+            if (node) node.remove();
+            return;
         }
-        renderLocalPresence();
-    }
+        let userEl = document.getElementById('user_' + name.replace(/\s/g, ''));
+        if (!userEl) {
+            userEl = document.createElement('div');
+            userEl.id = 'user_' + name.replace(/\s/g, '');
+            userEl.className = 'user-badge';
+            els.onlineUsersList.appendChild(userEl);
+        }
+        userEl.innerHTML = `<span class="status-dot"></span> ${user.name}`;
+    });
 
-    els.editorSelect.onchange = () => updatePresence();
+    els.editorSelect.onchange = () => { currentUser = els.editorSelect.value; heartbeat(); };
     els.addEditorBtn.onclick = () => {
         const name = els.newEditorInput.value.trim();
         if (name) {
             els.editorSelect.appendChild(new Option(name, name));
             els.editorSelect.value = name;
             els.newEditorInput.value = '';
-            updatePresence();
+            currentUser = name;
+            heartbeat();
         }
     };
 
-    // --- IMAGE COMPRESSOR FOR SPEEDY REAL-TIME SYNC ---
-    function compressImage(base64Str, maxWidth = 900) {
+    // --- OPTIMIZED COMPRESSOR ---
+    function compressImage(base64Str, maxWidth = 800) {
         return new Promise((resolve) => {
             const img = new Image();
             img.src = base64Str;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                if (width > maxWidth) {
-                    height = (maxWidth / width) * height;
-                    width = maxWidth;
-                }
-                canvas.width = width;
-                canvas.height = height;
+                let w = img.width; let h = img.height;
+                if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+                canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.75)); // Highly optimized compression
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.65)); // Magaan para mabilis mag-sync
             };
         });
     }
 
-    // --- CLOUD OR LOCAL UPLOAD SYSTEM ---
+    // --- REALTIME UPLOAD ---
     els.fileUpload.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        els.noFileText.innerText = "Syncing with real-time network engine...";
+        els.noFileText.innerText = "Broadcasting to team terminals...";
         let rawSrc = "";
 
         if (file.type === 'application/pdf') {
@@ -260,198 +222,185 @@
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
                 const page = await pdf.getPage(1);
-                const viewport = page.getViewport({scale: 2.0}); // Base render clear
+                const viewport = page.getViewport({scale: 1.5});
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+                canvas.height = viewport.height; canvas.width = viewport.width;
                 await page.render({canvasContext: ctx, viewport: viewport}).promise;
                 rawSrc = canvas.toDataURL('image/png');
-            } catch (err) {
-                alert("Failed to render PDF structure.");
-                return;
-            }
+            } catch (err) { return alert("PDF error"); }
         } else {
             rawSrc = await new Promise(r => { const reader = new FileReader(); reader.onload = e => r(e.target.result); reader.readAsDataURL(file); });
         }
 
-        const cloudReadySrc = await compressImage(rawSrc);
+        const optimizedSrc = await compressImage(rawSrc);
         const dateObj = new Date();
-        const fileRecord = {
-            id: 'file_' + Date.now(),
+        const fId = 'file_' + Date.now();
+        
+        room.get('files').get(fId).put({
+            id: fId,
             name: file.name,
-            src: cloudReadySrc,
+            src: optimizedSrc,
             createdBy: currentUser,
             lastEditedBy: currentUser,
             date: dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
             time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        if (isOnlineMode) {
-            database.ref('files/' + fileRecord.id).set(fileRecord);
-        } else {
-            localFilesData.push(fileRecord);
-            switchToFile(fileRecord.id);
-        }
+        });
+        
         els.fileUpload.value = "";
     };
 
-    // --- SYNCHRONIZED RE-RENDERING ---
+    // --- SYNC ENGINE LISTENERS ---
+    room.get('files').map().on((file, id) => {
+        if (!file) {
+            delete filesMap[id];
+            const folderItem = document.getElementById('card_' + id);
+            if (folderItem) folderItem.remove();
+            if (activeFileId === id) resetWorkspace();
+            return;
+        }
+        filesMap[id] = file;
+        renderDirectoryCard(file);
+    });
+
+    function renderDirectoryCard(file) {
+        let div = document.getElementById('card_' + file.id);
+        if (!div) {
+            div = document.createElement('div');
+            div.id = 'card_' + file.id;
+            els.directoryList.appendChild(div);
+        }
+        div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
+        div.onclick = () => switchToFile(file.id);
+        div.innerHTML = `
+            <div class="folder-name">📁 ${file.name}</div>
+            <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
+            <div class="folder-meta">
+                <span><span class="badge">Creator</span> ${file.createdBy}</span>
+                <span><span class="badge">Editor</span> ${file.lastEditedBy}</span>
+                <span style="color:#1e293b; margin-top:2px;">📅 ${file.date} | ${file.time}</span>
+            </div>`;
+    }
+
+    let activeTextListeners = {};
+
     function switchToFile(id) {
         activeFileId = id;
-        const filesList = isOnlineMode ? globalCloudFiles : localFilesData;
-        const file = filesList.find(f => f.id === id);
-        if(!file) return;
+        const file = filesMap[id];
+        if (!file) return;
 
         els.mainImage.src = file.src;
         els.imageContainer.style.display = 'inline-block';
         els.noFileText.style.display = 'none';
 
-        if (isOnlineMode) {
-            // Makinig sa Realtime Database para sa live texts ng file na ito
-            database.ref('texts/' + activeFileId).on('value', (snapshot) => {
-                renderLiveTexts(snapshot.val() || {});
-            });
-        } else {
-            renderLiveTexts(localTexts[activeFileId] || {});
-        }
-        renderDirectoryList(filesList);
+        // I-clear ang mga dating texts sa screen
+        els.textLayer.innerHTML = '';
+        
+        // Patayin ang mga lumang realtime listeners para sa nakaraang file
+        Object.keys(activeTextListeners).forEach(k => room.get('texts').get(id).get(k).off());
+
+        // Makinig sa mga bagong live texts para sa file na pinili
+        room.get('texts').get(id).get('data').map().on((textData, textId) => {
+            if (!textData) {
+                const node = document.getElementById(textId);
+                if (node) node.remove();
+                return;
+            }
+            renderOrUpdateText(textId, textData);
+        });
+
+        // I-update ang highlight sa listahan
+        Object.keys(filesMap).forEach(k => renderDirectoryCard(filesMap[k]));
     }
 
-    function renderLiveTexts(textObject) {
-        els.textLayer.innerHTML = '';
-        Object.keys(textObject).forEach(key => {
-            const data = textObject[key];
-            const div = document.createElement('div');
+    function renderOrUpdateText(textId, data) {
+        let div = document.getElementById(textId);
+        if (!div) {
+            div = document.createElement('div');
+            div.id = textId;
             div.className = 'text-overlay';
-            div.id = key;
             div.contentEditable = 'true';
-            div.innerText = data.text;
-            div.style.color = data.color;
-            div.style.fontSize = data.size + 'px';
-            div.style.left = data.x + 'px';
-            div.style.top = data.y + 'px';
-            div.innerHTML += `<span class="text-author">${data.author}</span>`;
             
-            // Reattach live sync inputs
-            div.oninput = () => updateTextData(key, div.innerText, data.x, data.y);
+            div.oninput = () => {
+                room.get('texts').get(activeFileId).get('data').get(textId).put({ text: div.innerText, author: currentUser });
+                room.get('files').get(activeFileId).put({ lastEditedBy: currentUser, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            };
+            
             div.onfocus = () => {
                 document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
                 div.classList.add('active');
                 els.textColor.value = data.color;
                 els.textSize.value = data.size;
             };
+            
             els.textLayer.appendChild(div);
-        });
+        }
+
+        // Huwag i-overwrite ang cursor kung ang user mismo ang nag-ti-type nito
+        if (document.activeElement !== div) {
+            div.innerText = data.text;
+        }
+        
+        div.style.color = data.color;
+        div.style.fontSize = data.size + 'px';
+        div.style.left = data.x + 'px';
+        div.style.top = data.y + 'px';
+        
+        // Linisin ang lumang badge bago maglagay ng bago
+        const oldAuthor = div.querySelector('.text-author');
+        if (oldAuthor) oldAuthor.remove();
+        div.innerHTML += `<span class="text-author">${data.author}</span>`;
     }
 
-    // --- REALTIME ACTION UPDATER ---
+    // --- LIVE ADD TEXT ON CLICK ---
     els.imageContainer.onclick = (e) => {
         if ((e.target === els.imageContainer || e.target === els.textLayer) && activeFileId) {
             const rect = els.textLayer.getBoundingClientRect();
             const textId = 'text_' + Date.now();
-            const textData = {
-                text: "Type...",
+            
+            room.get('texts').get(activeFileId).get('data').get(textId).put({
+                text: "Click & Type...",
                 color: els.textColor.value,
                 size: els.textSize.value,
                 x: e.clientX - rect.left,
                 y: e.clientY - rect.top,
                 author: currentUser
-            };
-
-            if (isOnlineMode) {
-                database.ref('texts/' + activeFileId + '/' + textId).set(textData);
-                database.ref('files/' + activeFileId).update({ lastEditedBy: currentUser, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
-            } else {
-                if (!localTexts[activeFileId]) localTexts[activeFileId] = {};
-                localTexts[activeFileId][textId] = textData;
-                renderLiveTexts(localTexts[activeFileId]);
-            }
+            });
         }
     };
-
-    function updateTextData(textId, newText, x, y) {
-        if (!activeFileId) return;
-        if (isOnlineMode) {
-            database.ref('texts/' + activeFileId + '/' + textId).update({ text: newText, author: currentUser });
-        } else {
-            localTexts[activeFileId][textId].text = newText;
-            localTexts[activeFileId][textId].author = currentUser;
-        }
-    }
 
     els.applyStyleBtn.onclick = () => {
         const activeNode = document.querySelector('.text-overlay.active');
         if (activeNode && activeFileId) {
-            if (isOnlineMode) {
-                database.ref('texts/' + activeFileId + '/' + activeNode.id).update({ color: els.textColor.value, size: els.textSize.value });
-            } else {
-                localTexts[activeFileId][activeNode.id].color = els.textColor.value;
-                localTexts[activeFileId][activeNode.id].size = els.textSize.value;
-                renderLiveTexts(localTexts[activeFileId]);
-            }
+            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put({
+                color: els.textColor.value,
+                size: els.textSize.value
+            });
         }
     };
 
-    // --- LIVE SYNC DATABASE LISTENERS ---
-    let globalCloudFiles = [];
-    if (isOnlineMode) {
-        database.ref('files').on('value', (snapshot) => {
-            globalCloudFiles = [];
-            snapshot.forEach(child => { globalCloudFiles.push(child.val()); });
-            renderDirectoryList(globalCloudFiles);
-            if(activeFileId && !globalCloudFiles.find(f => f.id === activeFileId)) {
-                // Kung dinelete ng ibang tao habang nakabukas mo
-                location.reload();
-            }
-        });
-    }
-
-    function renderDirectoryList(filesArray) {
-        els.directoryList.innerHTML = '';
-        filesArray.forEach(file => {
-            const div = document.createElement('div');
-            div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
-            div.onclick = () => switchToFile(file.id);
-            div.innerHTML = `
-                <div class="folder-name">📁 ${file.name}</div>
-                <button class="delete-btn" onclick="deleteCloudFile('${file.id}', event)">Delete</button>
-                <div class="folder-meta">
-                    <span><span class="badge">Created By</span> ${file.createdBy}</span>
-                    <span><span class="badge">Active Editor</span> ${file.lastEditedBy}</span>
-                    <span style="color:#1e293b; font-weight:500; margin-top:2px;">📅 ${file.date} | ${file.time}</span>
-                </div>`;
-            els.directoryList.appendChild(div);
-        });
-    }
-
-    window.deleteCloudFile = function(id, event) {
+    // --- DELETE LOGIC ---
+    window.deleteFile = function(id, event) {
         event.stopPropagation();
-        if (confirm("Delete this document across all active user terminals?")) {
-            if (isOnlineMode) {
-                database.ref('files/' + id).remove();
-                database.ref('texts/' + id).remove();
-            } else {
-                localFilesData = localFilesData.filter(f => f.id !== id);
-                delete localTexts[id];
-                if(activeFileId === id) {
-                    activeFileId = null;
-                    els.imageContainer.style.display = 'none';
-                    els.noFileText.style.display = 'block';
-                }
-                renderDirectoryList(localFilesData);
-            }
+        if (confirm("Gusto mo ba talagang burahin ito sa lahat ng katrabaho mo?")) {
+            room.get('files').get(id).put(null);
+            room.get('texts').get(id).put(null);
         }
     };
 
-    // --- HIGH-RESOLUTION ULTRA EXPORT ENGINE ---
-    els.downloadBtn.onclick = () => {
-        if (!activeFileId) return alert("Select an active synced project node.");
-        document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
+    function resetWorkspace() {
+        activeFileId = null;
+        els.imageContainer.style.display = 'none';
+        els.noFileText.style.display = 'block';
+        els.noFileText.innerText = "Select or Upload a file from the Cloud Directory to start collaborating!";
+    }
 
+    // --- HIGH RESOLUTION MASTER EXPORT ---
+    els.downloadBtn.onclick = () => {
+        if (!activeFileId) return alert("Pumili muna ng file sa directory.");
+        document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
         const format = document.getElementById('exportFormat').value;
-        const filesList = isOnlineMode ? globalCloudFiles : localFilesData;
-        const fName = filesList.find(f => f.id === activeFileId).name.split('.')[0];
+        const fName = filesMap[activeFileId].name.split('.')[0];
 
         html2canvas(els.imageContainer, { useCORS: true, backgroundColor: null, scale: 3 }).then(canvas => {
             if (format === 'pdf') {
@@ -460,10 +409,10 @@
                 const w = canvas.width / 3; const h = canvas.height / 3;
                 const pdf = new jsPDF({ orientation: w > h ? 'l' : 'p', unit: 'px', format: [w, h] });
                 pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
-                pdf.save(`${fName}_SyncDone.pdf`);
+                pdf.save(`${fName}_MasterLive.pdf`);
             } else {
                 const link = document.createElement('a');
-                link.download = `${fName}_SyncDone.${format}`;
+                link.download = `${fName}_MasterLive.${format}`;
                 link.href = canvas.toDataURL(`image/${format}`, 1.0);
                 link.click();
             }
