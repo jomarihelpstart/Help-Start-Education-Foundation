@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     
     <style>
@@ -47,6 +46,8 @@
         .btn:hover { background: #4f46e5; }
         .btn.outline { background: transparent; border: 1px solid #6366f1; color: #6366f1; }
         .btn.outline:hover { background: #e0e7ff; }
+        .btn.danger { border-color: #ef4444; color: #ef4444; }
+        .btn.danger:hover { background: #fee2e2; }
         
         .folder-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; position: relative; }
         .folder-item:hover { border-color: #94a3b8; background: #f1f5f9; }
@@ -84,11 +85,15 @@
         </div>
         <hr>
         <div>
-            <h3>🛠️ Text Style</h3>
+            <h3>🛠️ Text Tools</h3>
             <div class="input-group">
                 <input type="color" id="textColor" value="#6366f1" title="Text Color">
                 <input type="number" id="textSize" value="22" min="12" max="120" title="Font Size">
                 <button class="btn outline" id="applyStyleBtn">Apply</button>
+            </div>
+            <div class="input-group">
+                <button class="btn outline" id="undoBtn" style="flex: 1;">↩️ Undo</button>
+                <button class="btn outline danger" id="deleteTextBtn" style="flex: 1;">🗑️ Delete</button>
             </div>
         </div>
         <hr>
@@ -122,19 +127,13 @@
 </div>
 
 <script>
-    // --- AUTOMATIC PEER-TO-PEER NETWORK INITIALIZATION ---
-    // Kumokonekta ito sa mga pampublikong GunDB nodes para mag-sync nang walang account.
-    const gun = Gun([
-        'https://gun-manhattan.herokuapp.com/gun',
-        'https://relay.peer.ooo/gun'
-    ]);
-    
-    // Ito ang magiging sikretong kwarto ng team ninyo. Pwede mong palitan ang pangalan kung gusto mo.
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://relay.peer.ooo/gun']);
     const room = gun.get('jomari_shared_workspace_global_2026');
 
     let filesMap = {};
     let activeFileId = null;
     let currentUser = "Jomari";
+    let myAddedTexts = []; // BAGO: Nagtatago ng record ng mga ginawa mong text para sa Undo
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -152,19 +151,16 @@
         textSize: document.getElementById('textSize'),
         applyStyleBtn: document.getElementById('applyStyleBtn'),
         downloadBtn: document.getElementById('downloadBtn'),
-        onlineUsersList: document.getElementById('onlineUsersList')
+        onlineUsersList: document.getElementById('onlineUsersList'),
+        undoBtn: document.getElementById('undoBtn'),             // BAGO
+        deleteTextBtn: document.getElementById('deleteTextBtn')  // BAGO
     };
 
-    // --- REALTIME PRESENCE (SINO ANG ONLINE) ---
-    function heartbeat() {
-        room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() });
-    }
-    setInterval(heartbeat, 3000); // Sabihin sa network bawat 3 segundo na online ka
-    heartbeat();
+    function heartbeat() { room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() }); }
+    setInterval(heartbeat, 3000); heartbeat();
 
     room.get('presence').map().on((user, name) => {
         if (!user) return;
-        // Kapag hindi nagparamdam ng higit sa 8 segundo, ituring na offline
         if (Date.now() - user.time > 8000) {
             const node = document.getElementById('user_' + name.replace(/\s/g, ''));
             if (node) node.remove();
@@ -192,24 +188,20 @@
         }
     };
 
-    // --- OPTIMIZED COMPRESSOR ---
     function compressImage(base64Str, maxWidth = 800) {
         return new Promise((resolve) => {
-            const img = new Image();
-            img.src = base64Str;
+            const img = new Image(); img.src = base64Str;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let w = img.width; let h = img.height;
                 if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
                 canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.65)); // Magaan para mabilis mag-sync
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.65));
             };
         });
     }
 
-    // --- REALTIME UPLOAD ---
     els.fileUpload.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -224,9 +216,8 @@
                 const page = await pdf.getPage(1);
                 const viewport = page.getViewport({scale: 1.5});
                 const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
                 canvas.height = viewport.height; canvas.width = viewport.width;
-                await page.render({canvasContext: ctx, viewport: viewport}).promise;
+                await page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise;
                 rawSrc = canvas.toDataURL('image/png');
             } catch (err) { return alert("PDF error"); }
         } else {
@@ -238,19 +229,14 @@
         const fId = 'file_' + Date.now();
         
         room.get('files').get(fId).put({
-            id: fId,
-            name: file.name,
-            src: optimizedSrc,
-            createdBy: currentUser,
-            lastEditedBy: currentUser,
+            id: fId, name: file.name, src: optimizedSrc,
+            createdBy: currentUser, lastEditedBy: currentUser,
             date: dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
             time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
-        
         els.fileUpload.value = "";
     };
 
-    // --- SYNC ENGINE LISTENERS ---
     room.get('files').map().on((file, id) => {
         if (!file) {
             delete filesMap[id];
@@ -292,14 +278,11 @@
         els.mainImage.src = file.src;
         els.imageContainer.style.display = 'inline-block';
         els.noFileText.style.display = 'none';
-
-        // I-clear ang mga dating texts sa screen
         els.textLayer.innerHTML = '';
         
-        // Patayin ang mga lumang realtime listeners para sa nakaraang file
         Object.keys(activeTextListeners).forEach(k => room.get('texts').get(id).get(k).off());
+        myAddedTexts = []; // I-reset ang undo history kapag lumipat ng file
 
-        // Makinig sa mga bagong live texts para sa file na pinili
         room.get('texts').get(id).get('data').map().on((textData, textId) => {
             if (!textData) {
                 const node = document.getElementById(textId);
@@ -309,7 +292,6 @@
             renderOrUpdateText(textId, textData);
         });
 
-        // I-update ang highlight sa listahan
         Object.keys(filesMap).forEach(k => renderDirectoryCard(filesMap[k]));
     }
 
@@ -336,23 +318,18 @@
             els.textLayer.appendChild(div);
         }
 
-        // Huwag i-overwrite ang cursor kung ang user mismo ang nag-ti-type nito
-        if (document.activeElement !== div) {
-            div.innerText = data.text;
-        }
+        if (document.activeElement !== div) div.innerText = data.text;
         
         div.style.color = data.color;
         div.style.fontSize = data.size + 'px';
         div.style.left = data.x + 'px';
         div.style.top = data.y + 'px';
         
-        // Linisin ang lumang badge bago maglagay ng bago
         const oldAuthor = div.querySelector('.text-author');
         if (oldAuthor) oldAuthor.remove();
         div.innerHTML += `<span class="text-author">${data.author}</span>`;
     }
 
-    // --- LIVE ADD TEXT ON CLICK ---
     els.imageContainer.onclick = (e) => {
         if ((e.target === els.imageContainer || e.target === els.textLayer) && activeFileId) {
             const rect = els.textLayer.getBoundingClientRect();
@@ -366,20 +343,44 @@
                 y: e.clientY - rect.top,
                 author: currentUser
             });
+            myAddedTexts.push(textId); // BAGO: I-save ang text ID para pwedeng i-undo
         }
     };
 
     els.applyStyleBtn.onclick = () => {
         const activeNode = document.querySelector('.text-overlay.active');
         if (activeNode && activeFileId) {
-            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put({
-                color: els.textColor.value,
-                size: els.textSize.value
-            });
+            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put({ color: els.textColor.value, size: els.textSize.value });
         }
     };
 
-    // --- DELETE LOGIC ---
+    // --- BAGO: UNDO AT DELETE LOGIC ---
+    // Function para sa Undo Button (Buburahin ang huling nilagay mo)
+    els.undoBtn.onclick = () => {
+        if (myAddedTexts.length > 0 && activeFileId) {
+            const lastTextId = myAddedTexts.pop();
+            room.get('texts').get(activeFileId).get('data').get(lastTextId).put(null);
+        }
+    };
+
+    // Function para sa Delete Button (Buburahin kung ano ang naka-click)
+    els.deleteTextBtn.onclick = () => {
+        const activeNode = document.querySelector('.text-overlay.active');
+        if (activeNode && activeFileId) {
+            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null);
+        }
+    };
+
+    // Function para gumana yung "Delete" o "Backspace" na key sa mismong keyboard
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Delete' && activeFileId) {
+            const activeNode = document.querySelector('.text-overlay.active');
+            if (activeNode) {
+                room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null);
+            }
+        }
+    });
+
     window.deleteFile = function(id, event) {
         event.stopPropagation();
         if (confirm("Gusto mo ba talagang burahin ito sa lahat ng katrabaho mo?")) {
@@ -395,7 +396,6 @@
         els.noFileText.innerText = "Select or Upload a file from the Cloud Directory to start collaborating!";
     }
 
-    // --- HIGH RESOLUTION MASTER EXPORT ---
     els.downloadBtn.onclick = () => {
         if (!activeFileId) return alert("Pumili muna ng file sa directory.");
         document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
