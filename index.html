@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Workspace & Editor</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
+        
+        .sidebar { width: 320px; background: #ffffff; padding: 24px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.02); z-index: 10; overflow-y: auto; }
+        .right-sidebar { width: 320px; background: #ffffff; padding: 24px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto; z-index: 10; }
+        
+        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background-image: radial-gradient(#cbd5e1 1px, transparent 0); background-size: 20px 20px; }
+        .workspace { flex: 1; padding: 40px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; }
+        
+        .image-container { position: relative; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); background: white; border-radius: 4px; display: none; }
+        .image-container img { max-width: 100%; display: block; border-radius: 4px; pointer-events: none; }
+        
+        /* Text Editor Layers */
+        #textLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .text-overlay { position: absolute; padding: 4px 8px; font-weight: 600; cursor: move; border: 1px dashed transparent; min-width: 30px; background: transparent; pointer-events: auto; }
+        .text-overlay:focus, .text-overlay.active { outline: none; border: 1px dashed #3b82f6; background: rgba(255, 255, 255, 0.7); }
+        
+        h3 { font-size: 13px; text-transform: uppercase; color: #64748b; margin: 0 0 10px 0; letter-spacing: 0.5px; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+        input[type="text"], input[type="number"], select, input[type="file"] { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 13px; }
+        input[type="color"] { width: 40px; height: 36px; padding: 0; border: none; cursor: pointer; border-radius: 6px; }
+        
+        .btn { padding: 8px 12px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 13px; display: flex; justify-content: center; align-items: center; flex: 1;}
+        .btn:hover { background: #1d4ed8; }
+        .btn.outline { background: transparent; border: 1px solid #2563eb; color: #2563eb; }
+        .btn.outline:hover { background: #eff6ff; }
+        .btn.secondary { background: #e2e8f0; color: #334155; }
+        .btn.secondary:hover { background: #cbd5e1; }
+        
+        .folder-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; position: relative; }
+        .folder-item:hover { border-color: #94a3b8; }
+        .folder-item.active { background: #eff6ff; border-color: #3b82f6; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1); }
+        .folder-name { font-weight: 600; font-size: 14px; color: #0f172a; margin-bottom: 6px; width: 85%; word-wrap: break-word; }
+        .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 4px; }
+        .badge { background: #e0f2fe; color: #0284c7; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        
+        /* Delete Button Styles */
+        .delete-btn { position: absolute; top: 16px; right: 16px; background: #fee2e2; color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .delete-btn:hover { background: #fecaca; color: #b91c1c; }
+
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div>
+        <h3>1. Active Editor</h3>
+        <div class="input-group">
+            <select id="editorSelect"><option value="Jomari">Jomari</option></select>
+        </div>
+        <div class="input-group">
+            <input type="text" id="newEditorInput" placeholder="Add name...">
+            <button class="btn outline" id="addEditorBtn" style="flex: 0 0 auto;">Add</button>
+        </div>
+    </div>
+    <hr>
+    
+    <div>
+        <h3>2. Upload Document</h3>
+        <input type="file" id="fileUpload" accept="image/png, image/jpeg, application/pdf">
+        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">Supports PNG, JPEG, and PDF</small>
+    </div>
+    <hr>
+
+    <div>
+        <h3>3. Text Tools</h3>
+        <div class="input-group">
+            <button class="btn secondary" id="undoBtn">↶ Undo</button>
+            <button class="btn secondary" id="redoBtn">↷ Redo</button>
+        </div>
+        <div class="input-group">
+            <input type="color" id="textColor" value="#0f172a" title="Text Color">
+            <input type="number" id="textSize" value="16" min="10" max="100" title="Font Size (px)">
+            <button class="btn outline" id="applyStyleBtn" style="flex: 1;">Apply Style</button>
+        </div>
+    </div>
+    <hr>
+
+    <div>
+        <h3>4. Export High-Res File</h3>
+        <div class="input-group">
+            <select id="exportFormat">
+                <option value="png">PNG Image</option>
+                <option value="jpeg">JPEG Image</option>
+                <option value="pdf">PDF Document</option>
+            </select>
+        </div>
+        <button class="btn" id="downloadBtn" style="width: 100%;">Download Now</button>
+    </div>
+</div>
+
+<div class="main-area">
+    <div class="workspace" id="workspace">
+        <h2 id="noFileText" style="color: #94a3b8; font-weight: 400;">Upload a file to start editing</h2>
+        <div class="image-container" id="imageContainer">
+            <img id="mainImage" src="" alt="Workspace">
+            <div id="textLayer"></div>
+        </div>
+    </div>
+</div>
+
+<div class="right-sidebar">
+    <h3>Project Directory</h3>
+    <div id="directoryList"></div>
+</div>
+
+<script>
+    // System Config
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    // State
+    let filesData = [];
+    let activeFileId = null;
+    let activeTextElement = null;
+    
+    // History State para sa Undo/Redo
+    let historyStack = [];
+    let historyStep = -1;
+
+    // Elements
+    const elements = {
+        editorSelect: document.getElementById('editorSelect'),
+        newEditorInput: document.getElementById('newEditorInput'),
+        addEditorBtn: document.getElementById('addEditorBtn'),
+        fileUpload: document.getElementById('fileUpload'),
+        imageContainer: document.getElementById('imageContainer'),
+        mainImage: document.getElementById('mainImage'),
+        textLayer: document.getElementById('textLayer'),
+        directoryList: document.getElementById('directoryList'),
+        noFileText: document.getElementById('noFileText'),
+        textColor: document.getElementById('textColor'),
+        textSize: document.getElementById('textSize'),
+        applyStyleBtn: document.getElementById('applyStyleBtn'),
+        undoBtn: document.getElementById('undoBtn'),
+        redoBtn: document.getElementById('redoBtn')
+    };
+
+    // --- UNDO / REDO LOGIC ---
+    function saveHistory() {
+        historyStep++;
+        historyStack = historyStack.slice(0, historyStep);
+        historyStack.push(elements.textLayer.innerHTML);
+        updateDirectoryEdit();
+    }
+
+    elements.undoBtn.onclick = () => {
+        if (historyStep > 0) {
+            historyStep--;
+            elements.textLayer.innerHTML = historyStack[historyStep];
+            reattachTextListeners();
+        } else if (historyStep === 0) {
+            historyStep--;
+            elements.textLayer.innerHTML = '';
+        }
+    };
+
+    elements.redoBtn.onclick = () => {
+        if (historyStep < historyStack.length - 1) {
+            historyStep++;
+            elements.textLayer.innerHTML = historyStack[historyStep];
+            reattachTextListeners();
+        }
+    };
+
+    // --- ADD EDITOR ---
+    elements.addEditorBtn.onclick = () => {
+        const name = elements.newEditorInput.value.trim();
+        if (name) {
+            elements.editorSelect.appendChild(new Option(name, name));
+            elements.editorSelect.value = name;
+            elements.newEditorInput.value = '';
+        }
+    };
+
+    // --- UPLOAD FILE & PDF HANDLING ---
+    elements.fileUpload.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        elements.noFileText.innerText = "Processing high-res document...";
+
+        let imgSrc = "";
+        
+        // High Quality PDF Rendering
+        if (file.type === 'application/pdf') {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                const page = await pdf.getPage(1); 
+                
+                // Scale 2 para mas malinaw ang PDF render
+                const viewport = page.getViewport({scale: 2.0}); 
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                await page.render({canvasContext: ctx, viewport: viewport}).promise;
+                imgSrc = canvas.toDataURL('image/png', 1.0);
+            } catch (err) {
+                alert("Error loading PDF.");
+                return;
+            }
+        } else {
+            imgSrc = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        const dateObj = new Date();
+        const newFile = {
+            id: 'doc_' + Date.now(),
+            name: file.name,
+            src: imgSrc,
+            createdBy: elements.editorSelect.value,
+            lastEditedBy: elements.editorSelect.value,
+            date: dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+            time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        filesData.push(newFile);
+        switchToFile(newFile.id);
+        
+        // Reset file input para pwede ulit i-upload ang parehong file kung burahin
+        elements.fileUpload.value = ""; 
+    };
+
+    function switchToFile(id) {
+        activeFileId = id;
+        const file = filesData.find(f => f.id === id);
+        
+        elements.mainImage.src = file.src;
+        elements.imageContainer.style.display = 'inline-block';
+        elements.noFileText.style.display = 'none';
+        
+        elements.textLayer.innerHTML = '';
+        historyStack = [];
+        historyStep = -1;
+        
+        renderDirectory();
+    }
+
+    // --- DELETE FILE LOGIC ---
+    window.deleteFile = function(id, event) {
+        event.stopPropagation(); // Pigilan mag-switch ng file kapag pinindot ang delete
+        
+        if(confirm("Are you sure you want to delete this file from the directory?")) {
+            filesData = filesData.filter(f => f.id !== id);
+            
+            // Kung ang dinelete ay yung kasalukuyang nakabukas, i-clear ang workspace
+            if(activeFileId === id) {
+                activeFileId = null;
+                elements.imageContainer.style.display = 'none';
+                elements.noFileText.style.display = 'block';
+                elements.noFileText.innerText = "Upload a file to start editing";
+                elements.mainImage.src = '';
+                elements.textLayer.innerHTML = '';
+            }
+            renderDirectory();
+        }
+    };
+
+    function renderDirectory() {
+        elements.directoryList.innerHTML = '';
+        filesData.forEach(file => {
+            const div = document.createElement('div');
+            div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
+            div.onclick = () => switchToFile(file.id);
+            div.innerHTML = `
+                <div class="folder-name">📁 ${file.name}</div>
+                <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
+                <div class="folder-meta">
+                    <span><span class="badge">Creator</span> ${file.createdBy}</span>
+                    <span><span class="badge">Editor</span> ${file.lastEditedBy}</span>
+                    <span style="color:#0f172a; margin-top:4px;">📅 ${file.date} | ${file.time}</span>
+                </div>`;
+            elements.directoryList.appendChild(div);
+        });
+    }
+
+    function updateDirectoryEdit() {
+        const file = filesData.find(f => f.id === activeFileId);
+        if (file) {
+            file.lastEditedBy = elements.editorSelect.value;
+            file.time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            renderDirectory();
+        }
+    }
+
+    // --- TEXT EDITOR LOGIC ---
+    elements.imageContainer.onclick = (e) => {
+        if (e.target === elements.imageContainer || e.target === elements.textLayer) {
+            if (!activeFileId) return;
+            
+            document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
+
+            const rect = elements.textLayer.getBoundingClientRect();
+            const textDiv = document.createElement('div');
+            textDiv.className = 'text-overlay active';
+            textDiv.contentEditable = 'true';
+            textDiv.innerText = 'Type here...';
+            textDiv.style.color = elements.textColor.value;
+            textDiv.style.fontSize = elements.textSize.value + 'px';
+            textDiv.style.left = (e.clientX - rect.left) + 'px';
+            textDiv.style.top = (e.clientY - rect.top) + 'px';
+
+            elements.textLayer.appendChild(textDiv);
+            activeTextElement = textDiv;
+            textDiv.focus();
+
+            attachSingleTextListener(textDiv);
+            saveHistory();
+        }
+    };
+
+    function attachSingleTextListener(el) {
+        el.onfocus = () => {
+            document.querySelectorAll('.text-overlay').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+            activeTextElement = el;
+            
+            elements.textColor.value = rgbToHex(el.style.color) || '#0f172a';
+            elements.textSize.value = parseInt(el.style.fontSize) || 16;
+        };
+        el.onblur = () => saveHistory();
+    }
+
+    function reattachTextListeners() {
+        document.querySelectorAll('.text-overlay').forEach(el => attachSingleTextListener(el));
+    }
+
+    elements.applyStyleBtn.onclick = () => {
+        if (activeTextElement) {
+            activeTextElement.style.color = elements.textColor.value;
+            activeTextElement.style.fontSize = elements.textSize.value + 'px';
+            saveHistory();
+        }
+    };
+
+    function rgbToHex(rgb) {
+        if(!rgb || rgb.indexOf('rgb') < 0) return null;
+        const arr = rgb.match(/\d+/g);
+        return "#" + arr.map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- HIGH-QUALITY DOWNLOAD SYSTEM ---
+    document.getElementById('downloadBtn').onclick = () => {
+        if (!activeFileId) return alert("Please upload a file first.");
+        
+        document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
+
+        const format = document.getElementById('exportFormat').value;
+        const currentFile = filesData.find(f => f.id === activeFileId);
+        const fName = currentFile.name.split('.')[0];
+
+        // SCALE: 3 (Ito ang magpapalinaw ng quality ng Export)
+        html2canvas(elements.imageContainer, { 
+            useCORS: true, 
+            backgroundColor: null,
+            scale: 3 
+        }).then(canvas => {
+            if (format === 'pdf') {
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const { jsPDF } = window.jspdf;
+                
+                // Kalkulahin ang tamang sukat para sa PDF
+                const pdfWidth = canvas.width / 3; 
+                const pdfHeight = canvas.height / 3;
+                
+                const pdf = new jsPDF({ 
+                    orientation: pdfWidth > pdfHeight ? 'l' : 'p', 
+                    unit: 'px', 
+                    format: [pdfWidth, pdfHeight] 
+                });
+                
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save(`${fName}_Edited.pdf`);
+            } else {
+                const link = document.createElement('a');
+                link.download = `${fName}_Edited.${format}`;
+                link.href = canvas.toDataURL(`image/${format}`, 1.0);
+                link.click();
+            }
+        });
+    };
+</script>
+</body>
+</html>
