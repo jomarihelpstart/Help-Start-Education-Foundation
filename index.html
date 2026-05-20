@@ -14,9 +14,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         
         :root {
-            --bg-main: #0f172a;       /* Dark slate sleek header/sidebar */
-            --bg-workspace: #f1f5f9;  /* Soft clean gray workspace canvas */
-            --accent: #4f46e5;        /* Premium Indigo */
+            --bg-main: #0f172a;       
+            --bg-workspace: #f1f5f9;  
+            --accent: #4f46e5;        
             --accent-hover: #4338ca;
             --danger: #ef4444;
             --danger-hover: #b91c1c;
@@ -35,7 +35,6 @@
             overflow: hidden; 
         }
         
-        /* Modern Top Navigation Banner */
         #statusBanner { 
             background: linear-gradient(135deg, #4f46e5, #06b6d4); 
             color: white; 
@@ -50,7 +49,6 @@
 
         .app-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* Sleek Modern Sidebar */
         .sidebar { 
             width: 310px; 
             background: #ffffff; 
@@ -76,7 +74,6 @@
             box-shadow: -4px 0 24px rgba(15, 23, 42, 0.02);
         }
         
-        /* High-End Creative Canvas Area */
         .main-area { 
             flex: 1; 
             display: flex; 
@@ -104,28 +101,35 @@
             display: none; 
             border: 1px solid #cbd5e1; 
             padding: 6px;
-            transition: all 0.3s ease;
+            transition: box-shadow 0.3s ease;
         }
         
         .image-container img { max-width: 100%; display: block; border-radius: 8px; pointer-events: none; }
         
         #textLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        /* Elegant Modern Text Overlays */
-        .text-overlay { 
+        /* Draggable Structural Components */
+        .text-block-wrapper { 
             position: absolute; 
+            cursor: move; 
+            pointer-events: auto; 
+            z-index: 50;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .text-editable { 
             padding: 6px 10px; 
             font-weight: 700; 
-            cursor: move; 
             border: 2px dashed transparent; 
             min-width: 60px; 
             background: transparent; 
-            pointer-events: auto; 
             white-space: nowrap; 
             border-radius: 6px; 
-            transition: background 0.2s, border 0.2s;
+            display: inline-block;
+            user-select: text;
         }
-        .text-overlay:focus, .text-overlay.active { 
+        .text-editable:focus, .text-block-wrapper.active .text-editable { 
             outline: none; 
             border: 2px dashed var(--accent); 
             background: rgba(255, 255, 255, 0.95); 
@@ -134,7 +138,7 @@
         
         .text-author { 
             position: absolute; 
-            bottom: -18px; 
+            bottom: -20px; 
             left: 0; 
             font-size: 10px; 
             background: var(--accent); 
@@ -145,10 +149,11 @@
             display: none; 
             pointer-events: none; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            z-index: 60;
+            white-space: nowrap;
         }
-        .text-overlay.active .text-author, .text-overlay:hover .text-author { display: block; }
+        .text-block-wrapper.active .text-author, .text-block-wrapper:hover .text-author { display: block; }
         
-        /* Modernized Active Member Row styling */
         .user-badge { 
             display: flex; 
             align-items: center; 
@@ -160,14 +165,11 @@
             font-size: 13px; 
             font-weight: 600; 
             margin-bottom: 8px; 
-            transition: all 0.2s ease;
         }
-        .user-badge:hover { background: #f1f5f9; border-color: #cbd5e1; }
         
         .user-info { display: flex; align-items: center; gap: 10px; }
         .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #10b981; }
         
-        /* Member Kick Button Styling */
         .kick-user-btn {
             background: transparent;
             color: #94a3b8;
@@ -177,16 +179,11 @@
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 6px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
         .kick-user-btn:hover { background: #fee2e2; color: var(--danger); }
         
         h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin: 0 0 12px 0; letter-spacing: 0.8px; font-weight: 700; }
-        
-        /* Polished UI Controls */
         .input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
         
         input[type="text"], input[type="number"], select, input[type="file"] { 
@@ -198,13 +195,10 @@
             font-size: 13px; 
             font-weight: 500;
             background: #f8fafc;
-            transition: all 0.2s;
         }
         input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        
         input[type="color"] { width: 46px; height: 38px; padding: 0; border: 1px solid var(--border-color); cursor: pointer; border-radius: 8px; background: none; }
         
-        /* Modern High-Quality Buttons */
         .btn { 
             padding: 10px 16px; 
             background: var(--accent); 
@@ -216,19 +210,14 @@
             font-family: inherit; 
             font-size: 13px; 
             display: flex; justify-content: center; align-items: center; gap: 6px;
-            transition: all 0.2s ease;
             box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
         }
         .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 12px -1px rgba(79, 70, 229, 0.2); }
-        .btn:active { transform: translateY(0); }
-        
         .btn.outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none; }
         .btn.outline:hover { background: #f5f3ff; color: var(--accent-hover); }
-        
         .btn.danger { border-color: var(--danger); color: var(--danger); }
-        .btn.danger:hover { background: #fee2e2; color: var(--danger-hover); box-shadow: none; transform: none; }
+        .btn.danger:hover { background: #fee2e2; color: var(--danger-hover); }
         
-        /* Premium Directory Cards */
         .folder-item { 
             background: #ffffff; 
             border: 1px solid var(--border-color); 
@@ -236,35 +225,24 @@
             border-radius: 12px; 
             margin-bottom: 12px; 
             cursor: pointer; 
-            transition: all 0.2s ease; 
             position: relative; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
         }
         .folder-item:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04); }
-        .folder-item.active { background: #f5f3ff; border-color: var(--accent); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.05); }
+        .folder-item.active { background: #f5f3ff; border-color: var(--accent); }
         
         .folder-name { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 4px; }
-        
         .badge { background: #e0e7ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
         
         .delete-btn { 
             position: absolute; top: 16px; right: 16px; 
             background: #fee2e2; color: var(--danger); border: none; 
             padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; 
-            transition: all 0.2s;
         }
         .delete-btn:hover { background: var(--danger); color: white; }
-        
         hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
-        
-        /* Hidden file input trick for modern look */
-        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
-        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
@@ -318,7 +296,7 @@
 
     <div class="main-area">
         <div class="workspace" id="workspace">
-            <h2 id="noFileText" style="color: #64748b; font-weight: 500; font-size: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+            <h2 id="noFileText" style="color: #64748b; font-weight: 500; font-size: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e1;">
                 Select a live document from the right directory panel to begin workspace engine collaboration.
             </h2>
             <div class="image-container" id="imageContainer">
@@ -335,7 +313,13 @@
 </div>
 
 <script>
-    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://relay.peer.ooo/gun']);
+    // Multi-peer redundancy setup to maximize global socket sync capability
+    const gun = Gun([
+        'https://gun-manhattan.herokuapp.com/gun',
+        'https://relay.peer.ooo/gun',
+        'https://peer.wallie.io/gun',
+        'https://gun-text.herokuapp.com/gun'
+    ]);
     const room = gun.get('jomari_shared_workspace_global_2026');
 
     let filesMap = {};
@@ -367,7 +351,6 @@
     function heartbeat() { room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() }); }
     setInterval(heartbeat, 3000); heartbeat();
 
-    // MONITOR ACTIVE MEMBERS & HANDLE DELETIONS
     room.get('presence').map().on((user, name) => {
         const nodeId = 'user_' + name.replace(/\s/g, '');
         if (!user) {
@@ -375,14 +358,11 @@
             if (existingNode) existingNode.remove();
             return;
         }
-        
-        // Auto-remove if dead for 10 seconds
         if (Date.now() - user.time > 10000) {
             const node = document.getElementById(nodeId);
             if (node) node.remove();
             return;
         }
-        
         let userEl = document.getElementById(nodeId);
         if (!userEl) {
             userEl = document.createElement('div');
@@ -395,11 +375,10 @@
                 <span class="status-dot"></span>
                 <span>${user.name}</span>
             </div>
-            <button class="kick-user-btn" onclick="kickUser('${name}', event)" title="Remove user from active list">&times;</button>
+            <button class="kick-user-btn" onclick="kickUser('${name}', event)">&times;</button>
         `;
     });
 
-    // KICK / DELETE ACTIVE MEMBER FUNCTION
     window.kickUser = function(targetName, event) {
         event.stopPropagation();
         if (confirm(`Alisin si "${targetName}" sa active list ng website?`)) {
@@ -515,11 +494,6 @@
         myAddedTexts = [];
 
         room.get('texts').get(id).get('data').map().on((textData, textId) => {
-            if (!textData) {
-                const node = document.getElementById(textId);
-                if (node) node.remove();
-                return;
-            }
             renderOrUpdateText(textId, textData);
         });
 
@@ -527,38 +501,102 @@
     }
 
     function renderOrUpdateText(textId, data) {
-        let div = document.getElementById(textId);
-        if (!div) {
-            div = document.createElement('div');
-            div.id = textId;
-            div.className = 'text-overlay';
-            div.contentEditable = 'true';
+        let wrapper = document.getElementById(textId);
+        let editable;
+        let authorTag;
+
+        if (!data) {
+            if (wrapper) wrapper.remove();
+            return;
+        }
+        
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.id = textId;
+            wrapper.className = 'text-block-wrapper';
             
-            div.oninput = () => {
-                room.get('texts').get(activeFileId).get('data').get(textId).put({ text: div.innerText, author: currentUser });
-                room.get('files').get(activeFileId).put({ lastEditedBy: currentUser, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            editable = document.createElement('div');
+            editable.className = 'text-editable';
+            editable.contentEditable = 'true';
+            
+            authorTag = document.createElement('span');
+            authorTag.className = 'text-author';
+            
+            wrapper.appendChild(editable);
+            wrapper.appendChild(authorTag);
+            
+            // --- SMOOTH POINTER DRAG ENGINE ---
+            let isDragging = false;
+            let offsetX = 0; let offsetY = 0;
+            
+            wrapper.addEventListener('pointerdown', (e) => {
+                if (e.target !== wrapper && document.activeElement === editable) return;
+                isDragging = true;
+                wrapper.dataset.dragging = "true";
+                offsetX = e.clientX - wrapper.offsetLeft;
+                offsetY = e.clientY - wrapper.offsetTop;
+                wrapper.setPointerCapture(e.pointerId);
+                
+                document.querySelectorAll('.text-block-wrapper').forEach(el => el.classList.remove('active'));
+                wrapper.classList.add('active');
+            });
+            
+            wrapper.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                wrapper.style.left = (e.clientX - offsetX) + 'px';
+                wrapper.style.top = (e.clientY - offsetY) + 'px';
+            });
+            
+            wrapper.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                wrapper.dataset.dragging = "false";
+                wrapper.releasePointerCapture(e.pointerId);
+                
+                // Save final dragged positions securely to atomic mesh node
+                const node = room.get('texts').get(activeFileId).get('data').get(textId);
+                node.get('x').put(parseFloat(wrapper.style.left));
+                node.get('y').put(parseFloat(wrapper.style.top));
+            });
+            
+            editable.oninput = () => {
+                const node = room.get('texts').get(activeFileId).get('data').get(textId);
+                node.get('text').put(editable.innerText);
+                node.get('author').put(currentUser);
+                
+                room.get('files').get(activeFileId).get('lastEditedBy').put(currentUser);
+                room.get('files').get(activeFileId).get('time').put(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
             };
             
-            div.onfocus = () => {
-                document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
-                div.classList.add('active');
-                els.textColor.value = data.color;
-                els.textSize.value = data.size;
+            editable.onfocus = () => {
+                document.querySelectorAll('.text-block-wrapper').forEach(el => el.classList.remove('active'));
+                wrapper.classList.add('active');
+                if (data.color) els.textColor.value = data.color;
+                if (data.size) els.textSize.value = data.size;
             };
             
-            els.textLayer.appendChild(div);
+            els.textLayer.appendChild(wrapper);
+        } else {
+            editable = wrapper.querySelector('.text-editable');
+            authorTag = wrapper.querySelector('.text-author');
         }
 
-        if (document.activeElement !== div) div.innerText = data.text;
+        // Live Atomic Updates Prevention from text overriding bugs
+        if (document.activeElement !== editable) {
+            if (data.text !== undefined && editable.innerText !== data.text) {
+                editable.innerText = data.text || "";
+            }
+        }
         
-        div.style.color = data.color;
-        div.style.fontSize = data.size + 'px';
-        div.style.left = data.x + 'px';
-        div.style.top = data.y + 'px';
+        if (data.color) editable.style.color = data.color;
+        if (data.size) editable.style.fontSize = data.size + 'px';
         
-        const oldAuthor = div.querySelector('.text-author');
-        if (oldAuthor) oldAuthor.remove();
-        div.innerHTML += `<span class="text-author">${data.author}</span>`;
+        if (wrapper.dataset.dragging !== "true") {
+            if (data.x !== undefined) wrapper.style.left = data.x + 'px';
+            if (data.y !== undefined) wrapper.style.top = data.y + 'px';
+        }
+        
+        if (data.author) authorTag.innerText = data.author;
     }
 
     els.imageContainer.onclick = (e) => {
@@ -579,9 +617,11 @@
     };
 
     els.applyStyleBtn.onclick = () => {
-        const activeNode = document.querySelector('.text-overlay.active');
+        const activeNode = document.querySelector('.text-block-wrapper.active');
         if (activeNode && activeFileId) {
-            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put({ color: els.textColor.value, size: els.textSize.value });
+            const textId = activeNode.id;
+            room.get('texts').get(activeFileId).get('data').get(textId).get('color').put(els.textColor.value);
+            room.get('texts').get(activeFileId).get('data').get(textId).get('size').put(els.textSize.value);
         }
     };
 
@@ -593,13 +633,13 @@
     };
 
     els.deleteTextBtn.onclick = () => {
-        const activeNode = document.querySelector('.text-overlay.active');
+        const activeNode = document.querySelector('.text-block-wrapper.active');
         if (activeNode && activeFileId) { room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null); }
     };
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Delete' && activeFileId) {
-            const activeNode = document.querySelector('.text-overlay.active');
+            const activeNode = document.querySelector('.text-block-wrapper.active');
             if (activeNode) { room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null); }
         }
     });
@@ -620,7 +660,7 @@
 
     els.downloadBtn.onclick = () => {
         if (!activeFileId) return alert("Select active rendering vector first.");
-        document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.text-block-wrapper').forEach(el => el.classList.remove('active'));
         const format = document.getElementById('exportFormat').value;
         const fName = filesMap[activeFileId].name.split('.')[0];
 
