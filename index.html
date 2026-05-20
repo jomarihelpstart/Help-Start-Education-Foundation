@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Live Collaborative Workspace</title>
+    <title>Enterprise Collaborative Workspace Pro</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,108 +11,316 @@
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         
-        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
+        :root {
+            --bg-main: #0f172a;       /* Dark slate sleek header/sidebar */
+            --bg-workspace: #f1f5f9;  /* Soft clean gray workspace canvas */
+            --accent: #4f46e5;        /* Premium Indigo */
+            --accent-hover: #4338ca;
+            --danger: #ef4444;
+            --danger-hover: #b91c1c;
+            --text-dark: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            background-color: var(--bg-workspace); 
+            color: var(--text-dark); 
+            overflow: hidden; 
+        }
         
-        #statusBanner { background: #10b981; color: white; padding: 6px; text-align: center; font-size: 12px; font-weight: 600; display: block; letter-spacing: 0.5px; }
+        /* Modern Top Navigation Banner */
+        #statusBanner { 
+            background: linear-gradient(135deg, #4f46e5, #06b6d4); 
+            color: white; 
+            padding: 10px; 
+            text-align: center; 
+            font-size: 13px; 
+            font-weight: 600; 
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+            z-index: 20;
+        }
 
         .app-container { display: flex; flex: 1; overflow: hidden; }
         
-        .sidebar { width: 300px; background: #ffffff; padding: 20px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 16px; box-shadow: 2px 0 10px rgba(0,0,0,0.01); z-index: 10; overflow-y: auto; }
-        .right-sidebar { width: 300px; background: #ffffff; padding: 20px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto; z-index: 10; }
+        /* Sleek Modern Sidebar */
+        .sidebar { 
+            width: 310px; 
+            background: #ffffff; 
+            padding: 24px; 
+            border-right: 1px solid var(--border-color); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            box-shadow: 4px 0 24px rgba(15, 23, 42, 0.02); 
+            z-index: 10; 
+            overflow-y: auto; 
+        }
         
-        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background-image: radial-gradient(#cbd5e1 1px, transparent 0); background-size: 20px 20px; }
-        .workspace { flex: 1; padding: 30px; display: flex; justify-content: center; align-items: flex-start; overflow: auto; }
+        .right-sidebar { 
+            width: 310px; 
+            background: #ffffff; 
+            padding: 24px; 
+            border-left: 1px solid var(--border-color); 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            z-index: 10; 
+            box-shadow: -4px 0 24px rgba(15, 23, 42, 0.02);
+        }
         
-        .image-container { position: relative; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); background: white; border-radius: 6px; display: none; border: 1px solid #cbd5e1; }
-        .image-container img { max-width: 100%; display: block; border-radius: 6px; pointer-events: none; }
+        /* High-End Creative Canvas Area */
+        .main-area { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            background-image: radial-gradient(#cbd5e1 1.2px, transparent 0); 
+            background-size: 24px 24px; 
+            background-color: #f8fafc;
+        }
+        
+        .workspace { 
+            flex: 1; 
+            padding: 40px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+            overflow: auto; 
+        }
+        
+        .image-container { 
+            position: relative; 
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08); 
+            background: white; 
+            border-radius: 12px; 
+            display: none; 
+            border: 1px solid #cbd5e1; 
+            padding: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .image-container img { max-width: 100%; display: block; border-radius: 8px; pointer-events: none; }
         
         #textLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .text-overlay { position: absolute; padding: 4px 8px; font-weight: 700; cursor: move; border: 1px dashed transparent; min-width: 40px; background: transparent; pointer-events: auto; white-space: nowrap; border-radius: 4px; }
-        .text-overlay:focus, .text-overlay.active { outline: none; border: 1px dashed #6366f1; background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .text-author { position: absolute; bottom: -14px; left: 0; font-size: 9px; background: #6366f1; color: white; padding: 1px 4px; border-radius: 3px; font-weight: 500; display: none; pointer-events: none; }
+        
+        /* Elegant Modern Text Overlays */
+        .text-overlay { 
+            position: absolute; 
+            padding: 6px 10px; 
+            font-weight: 700; 
+            cursor: move; 
+            border: 2px dashed transparent; 
+            min-width: 60px; 
+            background: transparent; 
+            pointer-events: auto; 
+            white-space: nowrap; 
+            border-radius: 6px; 
+            transition: background 0.2s, border 0.2s;
+        }
+        .text-overlay:focus, .text-overlay.active { 
+            outline: none; 
+            border: 2px dashed var(--accent); 
+            background: rgba(255, 255, 255, 0.95); 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); 
+        }
+        
+        .text-author { 
+            position: absolute; 
+            bottom: -18px; 
+            left: 0; 
+            font-size: 10px; 
+            background: var(--accent); 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: 600; 
+            display: none; 
+            pointer-events: none; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
         .text-overlay.active .text-author, .text-overlay:hover .text-author { display: block; }
         
-        .user-badge { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
-        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #10b981; }
+        /* Modernized Active Member Row styling */
+        .user-badge { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 10px 14px; 
+            background: #f8fafc; 
+            border: 1px solid var(--border-color);
+            border-radius: 10px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            transition: all 0.2s ease;
+        }
+        .user-badge:hover { background: #f1f5f9; border-color: #cbd5e1; }
         
-        h3 { font-size: 12px; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 0.5px; font-weight: 700; }
-        .input-group { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
-        input[type="text"], input[type="number"], select, input[type="file"] { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 13px; }
-        input[type="color"] { width: 42px; height: 34px; padding: 0; border: 1px solid #cbd5e1; cursor: pointer; border-radius: 6px; background: none; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #10b981; }
         
-        .btn { padding: 8px 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; font-size: 13px; display: flex; justify-content: center; align-items: center; }
-        .btn:hover { background: #4f46e5; }
-        .btn.outline { background: transparent; border: 1px solid #6366f1; color: #6366f1; }
-        .btn.outline:hover { background: #e0e7ff; }
-        .btn.danger { border-color: #ef4444; color: #ef4444; }
-        .btn.danger:hover { background: #fee2e2; }
+        /* Member Kick Button Styling */
+        .kick-user-btn {
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .kick-user-btn:hover { background: #fee2e2; color: var(--danger); }
         
-        .folder-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; position: relative; }
-        .folder-item:hover { border-color: #94a3b8; background: #f1f5f9; }
-        .folder-item.active { background: #e0e7ff; border-color: #6366f1; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1); }
-        .folder-name { font-weight: 600; font-size: 13px; color: #0f172a; margin-bottom: 4px; width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 3px; }
-        .badge { background: #e0e7ff; color: #4f46e5; padding: 1px 4px; border-radius: 4px; font-weight: 600; font-size: 10px; }
+        h3 { font-size: 11px; text-transform: uppercase; color: #64748b; margin: 0 0 12px 0; letter-spacing: 0.8px; font-weight: 700; }
         
-        .delete-btn { position: absolute; top: 12px; right: 12px; background: #fee2e2; color: #ef4444; border: none; padding: 4px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; }
-        .delete-btn:hover { background: #fecaca; color: #b91c1c; }
-        hr { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
+        /* Polished UI Controls */
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+        
+        input[type="text"], input[type="number"], select, input[type="file"] { 
+            flex: 1; 
+            padding: 10px 14px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-family: inherit; 
+            font-size: 13px; 
+            font-weight: 500;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+        input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        input[type="color"] { width: 46px; height: 38px; padding: 0; border: 1px solid var(--border-color); cursor: pointer; border-radius: 8px; background: none; }
+        
+        /* Modern High-Quality Buttons */
+        .btn { 
+            padding: 10px 16px; 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-family: inherit; 
+            font-size: 13px; 
+            display: flex; justify-content: center; align-items: center; gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+        }
+        .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 12px -1px rgba(79, 70, 229, 0.2); }
+        .btn:active { transform: translateY(0); }
+        
+        .btn.outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none; }
+        .btn.outline:hover { background: #f5f3ff; color: var(--accent-hover); }
+        
+        .btn.danger { border-color: var(--danger); color: var(--danger); }
+        .btn.danger:hover { background: #fee2e2; color: var(--danger-hover); box-shadow: none; transform: none; }
+        
+        /* Premium Directory Cards */
+        .folder-item { 
+            background: #ffffff; 
+            border: 1px solid var(--border-color); 
+            padding: 16px; 
+            border-radius: 12px; 
+            margin-bottom: 12px; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            position: relative; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+        .folder-item:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04); }
+        .folder-item.active { background: #f5f3ff; border-color: var(--accent); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.05); }
+        
+        .folder-name { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 4px; }
+        
+        .badge { background: #e0e7ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
+        
+        .delete-btn { 
+            position: absolute; top: 16px; right: 16px; 
+            background: #fee2e2; color: var(--danger); border: none; 
+            padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; 
+            transition: all 0.2s;
+        }
+        .delete-btn:hover { background: var(--danger); color: white; }
+        
+        hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
+        
+        /* Hidden file input trick for modern look */
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
 
-<div id="statusBanner">🌐 INSTANT SYNC LIVE ONLINE MODE (NO CONFIG REQUIRED)</div>
+<div id="statusBanner">✨ ENTERPRISE COLLABORATIVE REALTIME HUB &bull; LIVE SYNC ACTIVE</div>
 
 <div class="app-container">
     <div class="sidebar">
         <div>
             <h3>👥 Active Team Online</h3>
             <div id="onlineUsersList"></div>
-            <div class="input-group" style="margin-top: 8px;">
+            <div class="input-group" style="margin-top: 12px;">
                 <select id="editorSelect"><option value="Jomari">Jomari</option></select>
             </div>
             <div class="input-group">
-                <input type="text" id="newEditorInput" placeholder="Type your name...">
-                <button class="btn outline" id="addEditorBtn">Join Team</button>
+                <input type="text" id="newEditorInput" placeholder="Enter profile name...">
+                <button class="btn outline" id="addEditorBtn" style="white-space: nowrap;">Join Hub</button>
             </div>
         </div>
         <hr>
         <div>
-            <h3>📁 Upload Resource</h3>
+            <h3>📁 Workspace Resource</h3>
             <input type="file" id="fileUpload" accept="image/png, image/jpeg, application/pdf">
         </div>
         <hr>
         <div>
-            <h3>🛠️ Text Tools</h3>
+            <h3>🛠️ Dynamic Typography Engine</h3>
             <div class="input-group">
-                <input type="color" id="textColor" value="#6366f1" title="Text Color">
-                <input type="number" id="textSize" value="22" min="12" max="120" title="Font Size">
+                <input type="color" id="textColor" value="#4f46e5" title="Text Color">
+                <input type="number" id="textSize" value="24" min="12" max="120" title="Font Size">
                 <button class="btn outline" id="applyStyleBtn">Apply</button>
             </div>
             <div class="input-group">
-                <button class="btn outline" id="undoBtn" style="flex: 1;">↩️ Undo</button>
+                <button class="btn outline" id="undoBtn" style="flex: 1;">↩️ Undo Text</button>
                 <button class="btn outline danger" id="deleteTextBtn" style="flex: 1;">🗑️ Delete</button>
             </div>
         </div>
         <hr>
         <div>
-            <h3>💾 Master Export</h3>
+            <h3>💾 Render & Export</h3>
             <div class="input-group">
                 <select id="exportFormat">
-                    <option value="png">PNG Image</option>
-                    <option value="jpeg">JPEG Image</option>
+                    <option value="png">PNG High-Res</option>
+                    <option value="jpeg">JPEG Standard</option>
                     <option value="pdf">PDF Document</option>
                 </select>
             </div>
-            <button class="btn" id="downloadBtn" style="width: 100%;">⚡ High-Res Download</button>
+            <button class="btn" id="downloadBtn" style="width: 100%;">⚡ Production Export</button>
         </div>
     </div>
 
     <div class="main-area">
         <div class="workspace" id="workspace">
-            <h2 id="noFileText" style="color: #94a3b8; font-weight: 400; font-size: 16px;">Select or Upload a file from the Cloud Directory to start collaborating!</h2>
+            <h2 id="noFileText" style="color: #64748b; font-weight: 500; font-size: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                Select a live document from the right directory panel to begin workspace engine collaboration.
+            </h2>
             <div class="image-container" id="imageContainer">
                 <img id="mainImage" src="" alt="Live Synchronized Panel">
                 <div id="textLayer"></div>
@@ -133,7 +341,7 @@
     let filesMap = {};
     let activeFileId = null;
     let currentUser = "Jomari";
-    let myAddedTexts = []; // BAGO: Nagtatago ng record ng mga ginawa mong text para sa Undo
+    let myAddedTexts = [];
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -152,29 +360,52 @@
         applyStyleBtn: document.getElementById('applyStyleBtn'),
         downloadBtn: document.getElementById('downloadBtn'),
         onlineUsersList: document.getElementById('onlineUsersList'),
-        undoBtn: document.getElementById('undoBtn'),             // BAGO
-        deleteTextBtn: document.getElementById('deleteTextBtn')  // BAGO
+        undoBtn: document.getElementById('undoBtn'),
+        deleteTextBtn: document.getElementById('deleteTextBtn')
     };
 
     function heartbeat() { room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() }); }
     setInterval(heartbeat, 3000); heartbeat();
 
+    // MONITOR ACTIVE MEMBERS & HANDLE DELETIONS
     room.get('presence').map().on((user, name) => {
-        if (!user) return;
-        if (Date.now() - user.time > 8000) {
-            const node = document.getElementById('user_' + name.replace(/\s/g, ''));
+        const nodeId = 'user_' + name.replace(/\s/g, '');
+        if (!user) {
+            const existingNode = document.getElementById(nodeId);
+            if (existingNode) existingNode.remove();
+            return;
+        }
+        
+        // Auto-remove if dead for 10 seconds
+        if (Date.now() - user.time > 10000) {
+            const node = document.getElementById(nodeId);
             if (node) node.remove();
             return;
         }
-        let userEl = document.getElementById('user_' + name.replace(/\s/g, ''));
+        
+        let userEl = document.getElementById(nodeId);
         if (!userEl) {
             userEl = document.createElement('div');
-            userEl.id = 'user_' + name.replace(/\s/g, '');
+            userEl.id = nodeId;
             userEl.className = 'user-badge';
             els.onlineUsersList.appendChild(userEl);
         }
-        userEl.innerHTML = `<span class="status-dot"></span> ${user.name}`;
+        userEl.innerHTML = `
+            <div class="user-info">
+                <span class="status-dot"></span>
+                <span>${user.name}</span>
+            </div>
+            <button class="kick-user-btn" onclick="kickUser('${name}', event)" title="Remove user from active list">&times;</button>
+        `;
     });
+
+    // KICK / DELETE ACTIVE MEMBER FUNCTION
+    window.kickUser = function(targetName, event) {
+        event.stopPropagation();
+        if (confirm(`Alisin si "${targetName}" sa active list ng website?`)) {
+            room.get('presence').get(targetName).put(null);
+        }
+    };
 
     els.editorSelect.onchange = () => { currentUser = els.editorSelect.value; heartbeat(); };
     els.addEditorBtn.onclick = () => {
@@ -188,7 +419,7 @@
         }
     };
 
-    function compressImage(base64Str, maxWidth = 800) {
+    function compressImage(base64Str, maxWidth = 900) {
         return new Promise((resolve) => {
             const img = new Image(); img.src = base64Str;
             img.onload = () => {
@@ -197,7 +428,7 @@
                 if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.65));
+                resolve(canvas.toDataURL('image/jpeg', 0.70));
             };
         });
     }
@@ -206,7 +437,7 @@
         const file = e.target.files[0];
         if (!file) return;
 
-        els.noFileText.innerText = "Broadcasting to team terminals...";
+        els.noFileText.innerText = "Processing rendering engine buffers...";
         let rawSrc = "";
 
         if (file.type === 'application/pdf') {
@@ -214,12 +445,12 @@
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
                 const page = await pdf.getPage(1);
-                const viewport = page.getViewport({scale: 1.5});
+                const viewport = page.getViewport({scale: 1.8});
                 const canvas = document.createElement('canvas');
                 canvas.height = viewport.height; canvas.width = viewport.width;
                 await page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise;
                 rawSrc = canvas.toDataURL('image/png');
-            } catch (err) { return alert("PDF error"); }
+            } catch (err) { return alert("PDF processing engine error."); }
         } else {
             rawSrc = await new Promise(r => { const reader = new FileReader(); reader.onload = e => r(e.target.result); reader.readAsDataURL(file); });
         }
@@ -259,12 +490,12 @@
         div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
         div.onclick = () => switchToFile(file.id);
         div.innerHTML = `
-            <div class="folder-name">📁 ${file.name}</div>
+            <div class="folder-name">📄 ${file.name}</div>
             <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
             <div class="folder-meta">
-                <span><span class="badge">Creator</span> ${file.createdBy}</span>
-                <span><span class="badge">Editor</span> ${file.lastEditedBy}</span>
-                <span style="color:#1e293b; margin-top:2px;">📅 ${file.date} | ${file.time}</span>
+                <span><span class="badge">Author</span> ${file.createdBy}</span>
+                <span><span class="badge">Modified</span> ${file.lastEditedBy}</span>
+                <span style="color:var(--text-dark); font-weight:600; margin-top:4px;">📅 ${file.date} | ${file.time}</span>
             </div>`;
     }
 
@@ -281,7 +512,7 @@
         els.textLayer.innerHTML = '';
         
         Object.keys(activeTextListeners).forEach(k => room.get('texts').get(id).get(k).off());
-        myAddedTexts = []; // I-reset ang undo history kapag lumipat ng file
+        myAddedTexts = [];
 
         room.get('texts').get(id).get('data').map().on((textData, textId) => {
             if (!textData) {
@@ -336,14 +567,14 @@
             const textId = 'text_' + Date.now();
             
             room.get('texts').get(activeFileId).get('data').get(textId).put({
-                text: "Click & Type...",
+                text: "Design Input...",
                 color: els.textColor.value,
                 size: els.textSize.value,
                 x: e.clientX - rect.left,
                 y: e.clientY - rect.top,
                 author: currentUser
             });
-            myAddedTexts.push(textId); // BAGO: I-save ang text ID para pwedeng i-undo
+            myAddedTexts.push(textId);
         }
     };
 
@@ -354,8 +585,6 @@
         }
     };
 
-    // --- BAGO: UNDO AT DELETE LOGIC ---
-    // Function para sa Undo Button (Buburahin ang huling nilagay mo)
     els.undoBtn.onclick = () => {
         if (myAddedTexts.length > 0 && activeFileId) {
             const lastTextId = myAddedTexts.pop();
@@ -363,27 +592,21 @@
         }
     };
 
-    // Function para sa Delete Button (Buburahin kung ano ang naka-click)
     els.deleteTextBtn.onclick = () => {
         const activeNode = document.querySelector('.text-overlay.active');
-        if (activeNode && activeFileId) {
-            room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null);
-        }
+        if (activeNode && activeFileId) { room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null); }
     };
 
-    // Function para gumana yung "Delete" o "Backspace" na key sa mismong keyboard
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Delete' && activeFileId) {
             const activeNode = document.querySelector('.text-overlay.active');
-            if (activeNode) {
-                room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null);
-            }
+            if (activeNode) { room.get('texts').get(activeFileId).get('data').get(activeNode.id).put(null); }
         }
     });
 
     window.deleteFile = function(id, event) {
         event.stopPropagation();
-        if (confirm("Gusto mo ba talagang burahin ito sa lahat ng katrabaho mo?")) {
+        if (confirm("Permanently erase document template node from global production environment?")) {
             room.get('files').get(id).put(null);
             room.get('texts').get(id).put(null);
         }
@@ -393,11 +616,10 @@
         activeFileId = null;
         els.imageContainer.style.display = 'none';
         els.noFileText.style.display = 'block';
-        els.noFileText.innerText = "Select or Upload a file from the Cloud Directory to start collaborating!";
     }
 
     els.downloadBtn.onclick = () => {
-        if (!activeFileId) return alert("Pumili muna ng file sa directory.");
+        if (!activeFileId) return alert("Select active rendering vector first.");
         document.querySelectorAll('.text-overlay').forEach(el => el.classList.remove('active'));
         const format = document.getElementById('exportFormat').value;
         const fName = filesMap[activeFileId].name.split('.')[0];
@@ -409,10 +631,10 @@
                 const w = canvas.width / 3; const h = canvas.height / 3;
                 const pdf = new jsPDF({ orientation: w > h ? 'l' : 'p', unit: 'px', format: [w, h] });
                 pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
-                pdf.save(`${fName}_MasterLive.pdf`);
+                pdf.save(`${fName}_Production.pdf`);
             } else {
                 const link = document.createElement('a');
-                link.download = `${fName}_MasterLive.${format}`;
+                link.download = `${fName}_Production.${format}`;
                 link.href = canvas.toDataURL(`image/${format}`, 1.0);
                 link.click();
             }
