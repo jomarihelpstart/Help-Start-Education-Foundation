@@ -66,7 +66,7 @@
         }
         
         .right-sidebar { 
-            width: 310px; 
+            width: 320px; 
             background: #ffffff; 
             padding: 24px; 
             border-left: 1px solid var(--border-color); 
@@ -213,6 +213,7 @@
             font-size: 13px; 
             display: flex; justify-content: center; align-items: center; gap: 6px;
             box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+            transition: all 0.2s;
         }
         .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 12px -1px rgba(79, 70, 229, 0.2); }
         .btn.outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none; }
@@ -223,28 +224,38 @@
         .folder-item { 
             background: #ffffff; 
             border: 1px solid var(--border-color); 
-            padding: 16px; 
+            padding: 14px; 
             border-radius: 12px; 
-            margin-bottom: 12px; 
+            margin-bottom: 10px; 
             cursor: pointer; 
             position: relative; 
+            transition: all 0.2s ease;
         }
         .folder-item:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04); }
         .folder-item.active { background: #f5f3ff; border-color: var(--accent); }
         
-        .folder-name { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .folder-name { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 6px; width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .folder-meta { font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 4px; }
         .badge { background: #e0e7ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
         
         .delete-btn { 
-            position: absolute; top: 16px; right: 16px; 
+            position: absolute; top: 12px; right: 12px; 
             background: #fee2e2; color: var(--danger); border: none; 
-            padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; 
+            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; 
         }
         .delete-btn:hover { background: var(--danger); color: white; }
         hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Folder Specific Styles */
+        .folder-group { border-left: 3px solid var(--accent); background: #f8fafc !important; }
+        #currentFolderHeader {
+            display: none; align-items: center; gap: 8px; margin-bottom: 16px; 
+            font-weight: 700; cursor: pointer; color: var(--accent); font-size: 13px;
+            padding: 10px; background: #e0e7ff; border-radius: 8px; transition: all 0.2s;
+        }
+        #currentFolderHeader:hover { background: #c7d2fe; }
     </style>
 </head>
 <body>
@@ -291,7 +302,7 @@
                     <option value="pdf">PDF Document</option>
                 </select>
             </div>
-            <button class="btn" id="downloadBtn" style="width: 100%;">⚡ Production Export</button>
+            <button class="btn" id="downloadBtn" style="width: 100%;">Download</button>
         </div>
     </div>
 
@@ -308,17 +319,25 @@
     </div>
 
     <div class="right-sidebar">
-        <h3>☁ Cloudinary Directory</h3>
+        <h3>☁ Cloud Directory</h3>
+        
+        <div id="folderControls" style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <input type="text" id="newFolderInput" placeholder="New Folder Name...">
+            <button class="btn outline" id="createFolderBtn" style="padding: 8px 12px;">+</button>
+        </div>
+        
+        <div id="currentFolderHeader">⬅ Back to Root</div>
+        
         <div id="directoryList"></div>
     </div>
 </div>
 
 <script>
     // =========================================================================
-    // 🔥 CLOUDINARY CONFIGURATION (Palitan ang mga detalye sa ibaba)
+    // 🔥 CLOUDINARY CONFIGURATION 
     // =========================================================================
-    const CLOUDINARY_CLOUD_NAME = "dhv16wfu3";
-    const CLOUDINARY_UPLOAD_PRESET = "Workspace-Storage";
+    const CLOUDINARY_CLOUD_NAME = "dhv16wfu3"; // Pinalitan ko na gamit ang nasa screenshot mo
+    const CLOUDINARY_UPLOAD_PRESET = "Workspace-Storage"; // Ilagay ang preset name rito
     // =========================================================================
 
     const gun = Gun([
@@ -330,9 +349,11 @@
     const room = gun.get('jomari_cloudinary_workspace_global_2026');
 
     let filesMap = {};
+    let foldersMap = {};
     let activeFileId = null;
     let currentUser = "Jomari";
     let myAddedTexts = [];
+    let currentFolderId = 'root'; // BAGO: Subaybayan kung nasa loob tayo ng folder
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -352,7 +373,11 @@
         onlineUsersList: document.getElementById('onlineUsersList'),
         undoBtn: document.getElementById('undoBtn'),
         deleteTextBtn: document.getElementById('deleteTextBtn'),
-        workspace: document.getElementById('workspace')
+        workspace: document.getElementById('workspace'),
+        folderControls: document.getElementById('folderControls'),
+        newFolderInput: document.getElementById('newFolderInput'),
+        createFolderBtn: document.getElementById('createFolderBtn'),
+        currentFolderHeader: document.getElementById('currentFolderHeader')
     };
 
     function heartbeat() { room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() }); }
@@ -388,9 +413,7 @@
 
     window.kickUser = function(targetName, event) {
         event.stopPropagation();
-        if (confirm(`Alisin si "${targetName}" sa active list ng website?`)) {
-            room.get('presence').get(targetName).put(null);
-        }
+        if (confirm(`Alisin si "${targetName}" sa active list ng website?`)) { room.get('presence').get(targetName).put(null); }
     };
 
     els.editorSelect.onchange = () => { currentUser = els.editorSelect.value; heartbeat(); };
@@ -419,6 +442,39 @@
         });
     }
 
+    // --- BAGO: FOLDER CREATION LOGIC ---
+    els.createFolderBtn.onclick = () => {
+        const fName = els.newFolderInput.value.trim();
+        if (fName) {
+            const fId = 'folder_' + Date.now();
+            room.get('folders').get(fId).put({ id: fId, name: fName });
+            els.newFolderInput.value = '';
+        }
+    };
+
+    els.currentFolderHeader.onclick = () => {
+        currentFolderId = 'root';
+        renderDirectory();
+    };
+
+    window.deleteFolder = function(id, event) {
+        event.stopPropagation();
+        if (confirm("Burahin ang folder na ito? (Ang mga files sa loob ay mananatili sa database pero mawawala ang folder na ito)")) {
+            room.get('folders').get(id).put(null);
+            if (currentFolderId === id) { currentFolderId = 'root'; }
+        }
+    };
+
+    // Pakinggan ang mga bagong Folders sa GunDB
+    room.get('folders').map().on((folder, id) => {
+        if (!folder) {
+            delete foldersMap[id];
+        } else {
+            foldersMap[id] = folder;
+        }
+        renderDirectory();
+    });
+
     els.fileUpload.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -446,7 +502,6 @@
         const fId = 'file_' + Date.now();
         
         try {
-            // 🔥 CLOUDINARY API UPLOAD VIA FETCH
             const formData = new FormData();
             formData.append('file', optimizedSrc);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -460,18 +515,16 @@
             const data = await response.json();
             
             if (data.secure_url) {
-                // I-save ang secure URL sa GunDB para mag-sync sa lahat
                 room.get('files').get(fId).put({
                     id: fId, name: file.name, src: data.secure_url,
                     createdBy: currentUser, lastEditedBy: currentUser,
+                    folderId: currentFolderId, // BAGO: Isama kung saang folder ina-upload
                     date: dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
                     time: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 });
                 els.fileUpload.value = "";
                 els.noFileText.innerText = "Upload Complete!";
-            } else {
-                throw new Error(data.error ? data.error.message : "Upload failed");
-            }
+            } else { throw new Error(data.error ? data.error.message : "Upload failed"); }
         } catch (error) {
             console.error("Cloudinary Upload Error:", error);
             alert("Error sa pag-upload sa Cloudinary. Siguraduhing tama ang Cloud Name at Unsigned Upload Preset mo.");
@@ -482,32 +535,58 @@
     room.get('files').map().on((file, id) => {
         if (!file) {
             delete filesMap[id];
-            const folderItem = document.getElementById('card_' + id);
-            if (folderItem) folderItem.remove();
             if (activeFileId === id) resetWorkspace();
-            return;
+        } else {
+            filesMap[id] = file;
         }
-        filesMap[id] = file;
-        renderDirectoryCard(file);
+        renderDirectory();
     });
 
-    function renderDirectoryCard(file) {
-        let div = document.getElementById('card_' + file.id);
-        if (!div) {
-            div = document.createElement('div');
-            div.id = 'card_' + file.id;
-            els.directoryList.appendChild(div);
+    // --- BAGO: SMART RENDERING ENGINE PARA SA FOLDERS AT FILES ---
+    function renderDirectory() {
+        els.directoryList.innerHTML = '';
+        
+        // I-update ang UI kung nasa loob o labas ng folder
+        if (currentFolderId !== 'root') {
+            els.currentFolderHeader.style.display = 'flex';
+            els.currentFolderHeader.innerHTML = `⬅ Balik sa Root <br><span style="font-size:10px; color:#64748b; font-weight:500;">(Nasa loob ng: ${foldersMap[currentFolderId]?.name || 'Folder'})</span>`;
+            els.folderControls.style.display = 'none';
+        } else {
+            els.currentFolderHeader.style.display = 'none';
+            els.folderControls.style.display = 'flex';
+            
+            // Render ng Folders kapag nasa root
+            Object.values(foldersMap).forEach(folder => {
+                const div = document.createElement('div');
+                div.className = 'folder-item folder-group';
+                div.onclick = () => { currentFolderId = folder.id; renderDirectory(); };
+                div.innerHTML = `
+                    <div class="folder-name" style="color: var(--accent); font-size: 14px;">📁 ${folder.name}</div>
+                    <button class="delete-btn" onclick="deleteFolder('${folder.id}', event)">Delete</button>
+                    <div class="folder-meta">Open Folder...</div>
+                `;
+                els.directoryList.appendChild(div);
+            });
         }
-        div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
-        div.onclick = () => switchToFile(file.id);
-        div.innerHTML = `
-            <div class="folder-name">📄 ${file.name}</div>
-            <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
-            <div class="folder-meta">
-                <span><span class="badge">Author</span> ${file.createdBy}</span>
-                <span><span class="badge">Modified</span> ${file.lastEditedBy}</span>
-                <span style="color:var(--text-dark); font-weight:600; margin-top:4px;">📅 ${file.date} | ${file.time}</span>
-            </div>`;
+
+        // Render ng mga Files na kabilang lang sa current folder
+        Object.values(filesMap).forEach(file => {
+            const fileFolderId = file.folderId || 'root';
+            if (fileFolderId !== currentFolderId) return;
+
+            const div = document.createElement('div');
+            div.className = `folder-item ${file.id === activeFileId ? 'active' : ''}`;
+            div.onclick = () => switchToFile(file.id);
+            div.innerHTML = `
+                <div class="folder-name">📄 ${file.name}</div>
+                <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
+                <div class="folder-meta">
+                    <span><span class="badge">Author</span> ${file.createdBy}</span>
+                    <span><span class="badge">Modified</span> ${file.lastEditedBy}</span>
+                    <span style="color:var(--text-dark); font-weight:600; margin-top:4px;">📅 ${file.date} | ${file.time}</span>
+                </div>`;
+            els.directoryList.appendChild(div);
+        });
     }
 
     let activeTextListeners = {};
@@ -529,7 +608,7 @@
             renderOrUpdateText(textId, textData);
         });
 
-        Object.keys(filesMap).forEach(k => renderDirectoryCard(filesMap[k]));
+        renderDirectory(); // I-highlight ang active file
     }
 
     function renderOrUpdateText(textId, data) {
@@ -615,9 +694,7 @@
         }
 
         if (document.activeElement !== editable) {
-            if (data.text !== undefined && editable.innerText !== data.text) {
-                editable.innerText = data.text || "";
-            }
+            if (data.text !== undefined && editable.innerText !== data.text) { editable.innerText = data.text || ""; }
         }
         
         if (data.color) editable.style.color = data.color;
@@ -690,8 +767,6 @@
         if (confirm("Permanently erase document template node from global production environment?")) {
             room.get('files').get(id).put(null);
             room.get('texts').get(id).put(null);
-            // Ang un-signed setup ay tinatanggal ang file sa listahan ng interface ng website. 
-            // Ang permanenteng pagbura sa dashboard ay madaling nagagawa sa cloudinary.com console.
         }
     };
 
