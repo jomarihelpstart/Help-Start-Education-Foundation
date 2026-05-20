@@ -529,7 +529,7 @@
             delete filesMap[id];
             if (activeFileId === id) resetWorkspace();
         } else {
-            filesMap[id] = file;
+            filesMap[id] = { ...filesMap[id], ...file };
         }
         renderDirectory();
     });
