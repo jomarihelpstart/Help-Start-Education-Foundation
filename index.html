@@ -255,6 +255,13 @@
             padding: 10px; background: #e0e7ff; border-radius: 8px; transition: all 0.2s;
         }
         #currentFolderHeader:hover { background: #c7d2fe; }
+        .rename-btn { 
+            position: absolute; top: 12px; right: 75px; /* Inusog pakaliwa para kasya sila ng Delete button */
+            background: #e0e7ff; color: var(--accent); border: none; 
+            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; 
+}
+         .rename-btn:hover { background: var(--accent); color: white; }
+        
     </style>
 </head>
 <body>
@@ -567,6 +574,7 @@
             div.onclick = () => switchToFile(file.id);
             div.innerHTML = `
                 <div class="folder-name">📄 ${file.name}</div>
+                <button class="rename-btn" onclick="renameFile('${file.id}', event)">Rename</button>
                 <button class="delete-btn" onclick="deleteFile('${file.id}', event)">Delete</button>
                 <div class="folder-meta">
                     <span><span class="badge">Author</span> ${file.createdBy}</span>
@@ -750,7 +758,7 @@
         }
     });
 
-    // DITO NAPUTOL ANG CODE MO KANINA, INAYOS KO NA ITO:
+    
     window.deleteFile = function(id, event) {
         event.stopPropagation();
         if (confirm("Permanently erase document template node from global production environment?")) {
@@ -759,6 +767,26 @@
             if (activeFileId === id) resetWorkspace();
         }
     };
+   
+    window.renameFile = function(id, event) {
+    event.stopPropagation(); // Pinipigilan nito na mag-trigger ang pag-click sa buong file item
+    const file = filesMap[id];
+    if (!file) return;
+
+    // Magpa-pop up ang isang box kung saan pwedeng i-type ang bagong pangalan
+    const newName = prompt("Ipasok ang bagong pangalan ng file:", file.name);
+    
+    if (newName && newName.trim() !== "") {
+        const dateObj = new Date();
+        const fileNode = room.get('files').get(id);
+        
+        // I-a-update lang natin ang mga partikular na detalye sa Gun.js nang hindi nabubura ang 'src'
+        fileNode.get('name').put(newName.trim());
+        fileNode.get('lastEditedBy').put(currentUser);
+        fileNode.get('date').put(dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
+        fileNode.get('time').put(dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }
+};
 
     function resetWorkspace() {
         activeFileId = null;
@@ -769,7 +797,7 @@
         els.textLayer.innerHTML = '';
     }
 
-    // DINAGDAG KO NA RIN ANG FUNCTION PARA GUMANA ANG DOWNLOAD BUTTON
+    
     els.downloadBtn.onclick = async () => {
         if (!activeFileId) return alert('Pumili muna ng document bago mag-export.');
         els.downloadBtn.innerText = 'Processing...';
