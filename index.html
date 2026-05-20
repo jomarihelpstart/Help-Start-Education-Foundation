@@ -263,34 +263,38 @@
          .rename-btn:hover { background: var(--accent); color: white; }
         
          .shared-notes-container {
-            margin: 20px;
+            margin: 15px 10px; /* Mas maliit na margin para kasya sa gilid */
             background: white;
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            box-sizing: border-box; /* Para hindi lumampas sa lapad ng sidebar */
 }
 
-           #shared-notes {
-            min-height: 200px;
-            padding: 10px;
+          #shared-notes {
+            min-height: 100px; /* Mas maikli na ang height */
+            max-height: 150px; /* Hindi lalampas dito, magkaka-scrollbar na lang */
+            padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             outline: none;
+            font-size: 12px; /* Pinaliit nang bahagya ang text */
             font-family: Arial, sans-serif;
-            line-height: 1.5;
+            line-height: 1.4;
             background: #fafafa;
+            overflow-y: auto; /* Para mag-scroll kapag masyadong humaba ang notes */
+            word-wrap: break-word; /* Para hindi lumagpas ang mahahabang salita */
 }
 
-          /* Para magbago ang kulay kapag naka-click (focused) ang user */
-          #shared-notes:focus {
-           border-color: var(--accent); /* Siguraduhing may --accent variable ka, o palitan ito ng kulay gaya ng #007bff */
-           background: #ffffff;
+         #shared-notes:focus {
+            border-color: var(--accent);
+            background: #ffffff;
 }
 
-          /* Placeholder effect kung walang laman */
-           #shared-notes:empty:before {
-             content: attr(placeholder);
-             color: #888;
+         #shared-notes:empty:before {
+            content: attr(placeholder);
+            color: #888;
+            font-style: italic;
 }
         
     </style>
@@ -366,13 +370,15 @@
         <div id="currentFolderHeader">⬅ Back to Root</div>
         
         <div id="directoryList"></div>
+            </div> 
+        </div> 
+            <div class="shared-notes-container">
+        <h3 style="font-size: 12px; margin-bottom: 5px; color: var(--text-dark);">📝 Shared Notes</h3>
+        <div id="shared-notes" contenteditable="true" placeholder="Mag-type dito..."></div>
     </div>
 </div>
-    
-    <div class="shared-notes-container">
-    <h3>📝 Shared Notes</h3>
-    <div id="shared-notes" contenteditable="true" placeholder="Mag-type dito... pareho ninyo itong makikita sa real-time."></div>
-</div>
+                
+
 
 <script>
     // =========================================================================
