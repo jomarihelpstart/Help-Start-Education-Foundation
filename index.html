@@ -50,7 +50,6 @@
             overflow-y: auto; 
         }
 
-        /* Compact Left Sync Indicator Badge */
         .sync-badge {
             background: linear-gradient(135deg, #4f46e5, #06b6d4);
             color: white;
@@ -276,7 +275,6 @@
             <div class="input-group">
                 <input type="color" id="textColor" value="#4f46e5" title="Text Color">
                 <input type="number" id="textSize" value="24" min="12" max="120" title="Font Size">
-                <button class="btn outline" id="applyStyleBtn">Apply</button>
             </div>
             <div class="input-group">
                 <button class="btn outline" id="undoBtn" style="flex: 1;">↩️ Undo Text</button>
@@ -310,7 +308,7 @@
     </div>
 
     <div class="right-sidebar">
-        <h3>☁ *Files*</h3>
+        <h3>☁ Files</h3>
         <div id="directoryList"></div>
     </div>
 </div>
@@ -343,11 +341,11 @@
         noFileText: document.getElementById('noFileText'),
         textColor: document.getElementById('textColor'),
         textSize: document.getElementById('textSize'),
-        applyStyleBtn: document.getElementById('applyStyleBtn'),
         downloadBtn: document.getElementById('downloadBtn'),
         onlineUsersList: document.getElementById('onlineUsersList'),
         undoBtn: document.getElementById('undoBtn'),
-        deleteTextBtn: document.getElementById('deleteTextBtn')
+        deleteTextBtn: document.getElementById('deleteTextBtn'),
+        workspace: document.getElementById('workspace')
     };
 
     function heartbeat() { room.get('presence').get(currentUser).put({ name: currentUser, time: Date.now() }); }
@@ -540,6 +538,9 @@
                 
                 document.querySelectorAll('.text-block-wrapper').forEach(el => el.classList.remove('active'));
                 wrapper.classList.add('active');
+                
+                if (data.color) els.textColor.value = data.color;
+                if (data.size) els.textSize.value = data.size;
             });
             
             wrapper.addEventListener('pointermove', (e) => {
@@ -598,6 +599,26 @@
         if (data.author) authorTag.innerText = data.author;
     }
 
+    // --- REVENUE OF REALTIME REACTIVE STYLING ENGINE ---
+    function updateActiveTextStyleInstant() {
+        const activeNode = document.querySelector('.text-block-wrapper.active');
+        if (activeNode && activeFileId) {
+            const textId = activeNode.id;
+            const node = room.get('texts').get(activeFileId).get('data').get(textId);
+            node.get('color').put(els.textColor.value);
+            node.get('size').put(els.textSize.value);
+        }
+    }
+    els.textColor.oninput = updateActiveTextStyleInstant;
+    els.textSize.oninput = updateActiveTextStyleInstant;
+
+    // Deselect wrapper selection state if clicking on dead workspace zones
+    els.workspace.onclick = (e) => {
+        if (e.target === els.workspace || e.target === els.noFileText) {
+            document.querySelectorAll('.text-block-wrapper').forEach(el => el.classList.remove('active'));
+        }
+    };
+
     els.imageContainer.onclick = (e) => {
         if ((e.target === els.imageContainer || e.target === els.textLayer) && activeFileId) {
             const rect = els.textLayer.getBoundingClientRect();
@@ -612,15 +633,6 @@
                 author: currentUser
             });
             myAddedTexts.push(textId);
-        }
-    };
-
-    els.applyStyleBtn.onclick = () => {
-        const activeNode = document.querySelector('.text-block-wrapper.active');
-        if (activeNode && activeFileId) {
-            const textId = activeNode.id;
-            room.get('texts').get(activeFileId).get('data').get(textId).get('color').put(els.textColor.value);
-            room.get('texts').get(activeFileId).get('data').get(textId).get('size').put(els.textSize.value);
         }
     };
 
