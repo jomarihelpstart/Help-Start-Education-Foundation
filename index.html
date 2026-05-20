@@ -34,18 +34,6 @@
             color: var(--text-dark); 
             overflow: hidden; 
         }
-        
-        #statusBanner { 
-            background: linear-gradient(135deg, #4f46e5, #06b6d4); 
-            color: white; 
-            padding: 10px; 
-            text-align: center; 
-            font-size: 13px; 
-            font-weight: 600; 
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-            z-index: 20;
-        }
 
         .app-container { display: flex; flex: 1; overflow: hidden; }
         
@@ -60,6 +48,22 @@
             box-shadow: 4px 0 24px rgba(15, 23, 42, 0.02); 
             z-index: 10; 
             overflow-y: auto; 
+        }
+
+        /* Compact Left Sync Indicator Badge */
+        .sync-badge {
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            align-self: flex-start;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
+            margin-bottom: -5px;
         }
         
         .right-sidebar { 
@@ -108,7 +112,6 @@
         
         #textLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        /* Draggable Structural Components */
         .text-block-wrapper { 
             position: absolute; 
             cursor: move; 
@@ -247,10 +250,10 @@
 </head>
 <body>
 
-<div id="statusBanner">✨ ENTERPRISE COLLABORATIVE REALTIME HUB &bull; LIVE SYNC ACTIVE</div>
-
 <div class="app-container">
     <div class="sidebar">
+        <div class="sync-badge">⚡ Live Sync Active</div>
+        
         <div>
             <h3>👥 Active Team Online</h3>
             <div id="onlineUsersList"></div>
@@ -264,7 +267,7 @@
         </div>
         <hr>
         <div>
-            <h3>📁 Workspace Resource</h3>
+            <h3>📁 Resource</h3>
             <input type="file" id="fileUpload" accept="image/png, image/jpeg, application/pdf">
         </div>
         <hr>
@@ -282,7 +285,7 @@
         </div>
         <hr>
         <div>
-            <h3>💾 Render & Export</h3>
+            <h3>💾 Export</h3>
             <div class="input-group">
                 <select id="exportFormat">
                     <option value="png">PNG High-Res</option>
@@ -307,13 +310,12 @@
     </div>
 
     <div class="right-sidebar">
-        <h3>☁️ Live Project Directory</h3>
+        <h3>☁ *Files*</h3>
         <div id="directoryList"></div>
     </div>
 </div>
 
 <script>
-    // Multi-peer redundancy setup to maximize global socket sync capability
     const gun = Gun([
         'https://gun-manhattan.herokuapp.com/gun',
         'https://relay.peer.ooo/gun',
@@ -525,7 +527,6 @@
             wrapper.appendChild(editable);
             wrapper.appendChild(authorTag);
             
-            // --- SMOOTH POINTER DRAG ENGINE ---
             let isDragging = false;
             let offsetX = 0; let offsetY = 0;
             
@@ -553,7 +554,6 @@
                 wrapper.dataset.dragging = "false";
                 wrapper.releasePointerCapture(e.pointerId);
                 
-                // Save final dragged positions securely to atomic mesh node
                 const node = room.get('texts').get(activeFileId).get('data').get(textId);
                 node.get('x').put(parseFloat(wrapper.style.left));
                 node.get('y').put(parseFloat(wrapper.style.top));
@@ -581,7 +581,6 @@
             authorTag = wrapper.querySelector('.text-author');
         }
 
-        // Live Atomic Updates Prevention from text overriding bugs
         if (document.activeElement !== editable) {
             if (data.text !== undefined && editable.innerText !== data.text) {
                 editable.innerText = data.text || "";
