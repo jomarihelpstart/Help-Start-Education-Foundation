@@ -264,6 +264,29 @@
         
         
 }
+        #co-author-pad {
+    background: white;
+    color: #333;
+    max-width: 750px; /* Tamang lapad parang short bond paper */
+    min-height: 350px; /* May sapat na taas para sa pagsusulat */
+    margin: 30px auto; /* Gitna ng main workspace */
+    padding: 30px;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08); /* Mahinang shadow para lumutang ang papel */
+    outline: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    text-align: left;
+    overflow-y: auto;
+}
+
+/* Placeholder kapag walang laman ang dokumento */
+#co-author-pad:empty:before {
+    content: attr(placeholder);
+    color: #aaa;
+    font-style: italic;
+}
         
     </style>
 </head>
@@ -320,14 +343,15 @@
             <h2 id="noFileText" style="color: #64748b; font-weight: 500; font-size: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e1;">
                 Select a live document from the right directory panel to begin workspace engine collaboration.
             </h2>
+            <div class="main-content"> <div id="image-container"> ...</div>
+
+    <div id="co-author-pad" contenteditable="true" placeholder="Magsulat at mag-co-author dito kasama ang iyong katrabaho..."></div>
+
+</div>
             <div class="image-container" id="imageContainer">
                 <img id="mainImage" src="" alt="Live Synchronized Panel" crossorigin="anonymous">
                 <div id="textLayer"></div>
             </div>
-       <div id="main-file-viewer" contenteditable="true" style="min-height: 200px; border: 1px solid #ccc; padding: 10px; margin-top: 20px; background: white;">
-        Mag-type dito para sa file na ito...
-    </div>
-</div>
     <div class="right-sidebar">
         <h3>☁ Cloud Directory</h3>
         
@@ -341,7 +365,7 @@
         <div id="directoryList"></div>
             </div> 
         </div>
-    <div id="main-file-viewer" contenteditable="true" placeholder="Magsimulang mag-type sa file na ito..."></div>
+  
            
 
 <script>
@@ -544,6 +568,7 @@
         } else {
             filesMap[id] = { ...filesMap[id], ...file };
         }
+       
         renderDirectory();
     });
 
@@ -609,21 +634,24 @@
         room.get('texts').get(id).get('data').map().on((textData, textId) => {
             renderOrUpdateText(textId, textData);
         });
-        const mainViewer = document.getElementById('main-file-viewer'); // Siguraduhing tama ang ID na ito sa HTML mo
+        
+        const coPad = document.getElementById('co-author-pad');
     
-    // I-off ang lumang text sync kung lumipat ka ng ibang file para hindi maghalo-halo
-    if (window.currentFileTextListener) {
-        window.currentFileTextListener.off();
+    // I-off ang lumang listener para sa nakaraang file
+    if (window.activeCoAuthorListener) {
+        window.activeCoAuthorListener.off();
     }
 
-    window.currentFileTextListener = room.get('files').get(id).get('fileContent');
-    window.currentFileTextListener.on((data) => {
-        // I-update lang kung hindi ikaw ang nag-ta-type para hindi tumalon ang cursor mo
-        if (activeFileId === id && document.activeElement !== mainViewer) {
-            mainViewer.innerHTML = data || '';
+    // Konekta sa Gun.js node para sa text ng partikular na file na ito
+    window.activeCoAuthorListener = room.get('files').get(id).get('documentText');
+    window.activeCoAuthorListener.on((textData) => {
+        // I-u-update lang ang screen mo kung hindi ikaw ang kasalukuyang nag-ta-type
+        if (activeFileId === id && document.activeElement !== coPad) {
+            coPad.innerHTML = textData || '';
         }
     });
 
+        
         renderDirectory(); 
     }
 
@@ -873,17 +901,11 @@
         }
         els.downloadBtn.innerText = 'Select a live document from the right directory panel to begin workspace engine collaboration.';
     };
-    const mainViewer = document.getElementById('main-file-viewer');
-
-// HAKBANG A: Kapag nag-type ka sa main workspace
-mainViewer.addEventListener('input', () => {
-    // Siguraduhing may nakabukas na file bago mag-save
+    document.getElementById('co-author-pad').addEventListener('input', (e) => {
     if (activeFileId) {
-        // Ise-save nito ang text sa mismong database node ng nakabukas na file
-        room.get('files').get(activeFileId).get('fileContent').put(mainViewer.innerHTML);
+        room.get('files').get(activeFileId).get('documentText').put(e.target.innerHTML);
     }
 });
-    
 
 
 
