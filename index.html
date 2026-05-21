@@ -960,51 +960,59 @@
     }
 });
    document.getElementById('mobile-upload-btn').addEventListener('change', function(e) {
+    alert("Hakbang 1: Nakuha ang file mula sa phone.");
     const file = e.target.files[0];
     if (!file) return;
 
-    // Siguraduhing imahe ang ina-upload natin para sa compression
     if (!file.type.startsWith('image/')) {
-        alert("Paumanhin, mga larawan lamang muna ang pwedeng i-compress sa ngayon.");
+        alert("Error: Hindi ito imahe.");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = function(event) {
+        alert("Hakbang 2: Nabasa ng browser ang file.");
         const img = new Image();
         img.onload = function() {
-            // === HAKBANG 1: Gagawa ng Canvas para sa Compression ===
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1000; // Limitahan lang sa 1000px ang lapad para magaan sa database
-            let width = img.width;
-            let height = img.height;
+            alert("Hakbang 3: Sinisimulan ang compression...");
+            try {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Ginawa nating 800 para mas sigurado
+                let width = img.width;
+                let height = img.height;
 
-            if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5); // Mas pinababa pa natin (0.5)
+                alert("Hakbang 4: Tagumpay ang compression! Ise-save na sa Gun.js...");
+
+                const newFileId = Gun.text.random(8);
+                const fileName = file.name;
+
+                room.get('files').get(newFileId).put({
+                    id: newFileId,
+                    src: compressedBase64,
+                    name: fileName,
+                    timestamp: Date.now()
+                }, function(ack) {
+                    if(ack.err) {
+                        alert("Error sa pag-save: " + ack.err);
+                    } else {
+                        alert("Hakbang 5: 100% SUCCESS! Na-save sa database.");
+                    }
+                });
+            } catch (error) {
+                alert("May nag-crash sa proseso: " + error.message);
             }
-
-            canvas.width = width;
-            canvas.height = height;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // === HAKBANG 2: I-convert sa Compressed JPEG (0.6 quality = Sobrang gaan!) ===
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
-            const newFileId = Gun.text.random(8);
-            const fileName = file.name;
-
-            // I-save ang pinaliit na data sa Gun.js
-            room.get('files').get(newFileId).put({
-                id: newFileId,
-                src: compressedBase64,
-                name: fileName,
-                timestamp: Date.now()
-            });
-            
-            alert("Success! Na-upload at na-compress na ang iyong mobile photo.");
         };
         img.src = event.target.result;
     };
