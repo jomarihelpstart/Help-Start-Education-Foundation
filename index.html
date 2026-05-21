@@ -287,6 +287,38 @@
     color: #aaa;
     font-style: italic;
 }
+        @media screen and (max-width: 768px) {
+    /* Kung ang buong website mo ay may container (tulad ng body o .container na naka-flex) */
+    body {
+        flex-direction: column !important; /* Pagpapatungin ang directory at workspace imbes na magkatabi */
+        overflow-y: auto;
+    }
+
+    /* Ang iyong Cloud Directory sa gilid */
+    .right-sidebar {
+        width: 100% !important; /* Sasakupin ang buong lapad */
+        height: auto !important;
+        max-height: 40vh; /* Wag masyadong mahaba para makita pa rin ang editor */
+        border-right: none;
+        border-bottom: 2px solid #ddd;
+    }
+
+    /* Ang main workspace kung nasaan ang editor */
+    .main-content {
+        width: 100% !important;
+        height: auto;
+        padding: 10px;
+    }
+
+    /* Paliitin ang Co-authoring Pad */
+    #co-author-pad {
+        width: 95% !important;
+        margin: 10px auto !important;
+        padding: 15px !important;
+        min-height: 250px !important;
+        font-size: 14px; /* Medyo paliitin ang text */
+    }
+}
         
     </style>
 </head>
@@ -353,6 +385,13 @@
                 <div id="textLayer"></div>
             </div>
     <div class="right-sidebar">
+        <div style="margin-bottom: 15px; text-align: center;">
+    <input type="file" id="mobile-upload-btn" accept="image/*, .txt, .pdf" style="display: none;">
+    <button onclick="document.getElementById('mobile-upload-btn').click()" 
+            style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%;">
+        + Upload File
+    </button>
+</div>
         <h3>☁ Cloud Directory</h3>
         
         <div id="folderControls" style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -905,6 +944,28 @@
     if (activeFileId) {
         room.get('files').get(activeFileId).get('documentText').put(e.target.innerHTML);
     }
+});
+    document.getElementById('mobile-upload-btn').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const fileData = event.target.result; // Ito yung base64 data ng file mo
+        const newFileId = Gun.text.random(8); // Gagawa ng random ID
+        const fileName = file.name;
+
+        // I-save sa Gun.js (Siguraduhing tugma ang mga keys na ito sa orihinal mong upload logic)
+        room.get('files').get(newFileId).put({
+            id: newFileId,
+            src: fileData, // Kung image ito
+            name: fileName,
+            timestamp: Date.now()
+        });
+        
+        alert("Na-upload na ang file!");
+    };
+    reader.readAsDataURL(file);
 });
 
 
