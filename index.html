@@ -262,39 +262,7 @@
 }
          .rename-btn:hover { background: var(--accent); color: white; }
         
-         .shared-notes-container {
-            margin: 15px 10px; /* Mas maliit na margin para kasya sa gilid */
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-            box-sizing: border-box; /* Para hindi lumampas sa lapad ng sidebar */
-}
-
-          #shared-notes {
-            min-height: 100px; /* Mas maikli na ang height */
-            max-height: 150px; /* Hindi lalampas dito, magkaka-scrollbar na lang */
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            outline: none;
-            font-size: 12px; /* Pinaliit nang bahagya ang text */
-            font-family: Arial, sans-serif;
-            line-height: 1.4;
-            background: #fafafa;
-            overflow-y: auto; /* Para mag-scroll kapag masyadong humaba ang notes */
-            word-wrap: break-word; /* Para hindi lumagpas ang mahahabang salita */
-}
-
-         #shared-notes:focus {
-            border-color: var(--accent);
-            background: #ffffff;
-}
-
-         #shared-notes:empty:before {
-            content: attr(placeholder);
-            color: #888;
-            font-style: italic;
+        
 }
         
     </style>
@@ -356,9 +324,10 @@
                 <img id="mainImage" src="" alt="Live Synchronized Panel" crossorigin="anonymous">
                 <div id="textLayer"></div>
             </div>
-        </div>
+       <div id="main-file-viewer" contenteditable="true" style="min-height: 200px; border: 1px solid #ccc; padding: 10px; margin-top: 20px; background: white;">
+        Mag-type dito para sa file na ito...
     </div>
-
+</div>
     <div class="right-sidebar">
         <h3>☁ Cloud Directory</h3>
         
@@ -371,14 +340,9 @@
         
         <div id="directoryList"></div>
             </div> 
-        </div> 
-            <div class="shared-notes-container">
-        <h3 style="font-size: 12px; margin-bottom: 5px; color: var(--text-dark);">📝 Shared Notes</h3>
-        <div id="shared-notes" contenteditable="true" placeholder="Mag-type dito..."></div>
-    </div>
-</div>
-                
-
+        </div>
+    <div id="main-file-viewer" contenteditable="true" placeholder="Magsimulang mag-type sa file na ito..."></div>
+           
 
 <script>
     // =========================================================================
@@ -645,6 +609,20 @@
         room.get('texts').get(id).get('data').map().on((textData, textId) => {
             renderOrUpdateText(textId, textData);
         });
+        const mainViewer = document.getElementById('main-file-viewer'); // Siguraduhing tama ang ID na ito sa HTML mo
+    
+    // I-off ang lumang text sync kung lumipat ka ng ibang file para hindi maghalo-halo
+    if (window.currentFileTextListener) {
+        window.currentFileTextListener.off();
+    }
+
+    window.currentFileTextListener = room.get('files').get(id).get('fileContent');
+    window.currentFileTextListener.on((data) => {
+        // I-update lang kung hindi ikaw ang nag-ta-type para hindi tumalon ang cursor mo
+        if (activeFileId === id && document.activeElement !== mainViewer) {
+            mainViewer.innerHTML = data || '';
+        }
+    });
 
         renderDirectory(); 
     }
@@ -895,24 +873,19 @@
         }
         els.downloadBtn.innerText = 'Select a live document from the right directory panel to begin workspace engine collaboration.';
     };
+    const mainViewer = document.getElementById('main-file-viewer');
 
-    const notesArea = document.getElementById('shared-notes');
-
-// HAKBANG A: Pakinggan kapag NAG-TA-TYPE ka, at ipadala sa Gun.js
-notesArea.addEventListener('input', () => {
-    // Kinukuha ang laman ng HTML at pinapadala sa database node na 'shared_workspace_notes'
-    room.get('shared_workspace_notes').put(notesArea.innerHTML);
-});
-
-// HAKBANG B: Pakinggan kapag may DUMATING na type mula sa katrabaho mo
-room.get('shared_workspace_notes').on((data) => {
-    // MAHALAGA: I-u-update lang natin ang screen mo KUNG HINDI IKAW ANG KASALUKUYANG NAG-TA-TYPE.
-    // Kung hindi natin lalagyan ng ganitong checking (document.activeElement),
-    // babalik sa unahan ang cursor mo sa tuwing magta-type ang katrabaho mo.
-    if (document.activeElement !== notesArea) {
-        notesArea.innerHTML = data || '';
+// HAKBANG A: Kapag nag-type ka sa main workspace
+mainViewer.addEventListener('input', () => {
+    // Siguraduhing may nakabukas na file bago mag-save
+    if (activeFileId) {
+        // Ise-save nito ang text sa mismong database node ng nakabukas na file
+        room.get('files').get(activeFileId).get('fileContent').put(mainViewer.innerHTML);
     }
 });
+    
+
+
 
 </script>
 </body>
