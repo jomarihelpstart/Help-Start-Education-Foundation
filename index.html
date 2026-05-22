@@ -356,7 +356,7 @@
         <hr>
         <div>
             <h3>📁 Resource</h3>
-            <input type="file" id="fileUpload" accept="image/png, image/jpeg, application/pdf">
+            <input type="file" id="resource-file-input" accept="image/png, image/jpeg, application/pdf">
         </div>
         <hr>
         <div>
@@ -399,12 +399,6 @@
                 <div id="textLayer"></div>
             </div>
     <div class="right-sidebar">
-        <div style="margin-bottom: 15px; text-align: center;">
-    <input type="file" id="mobile-upload-btn" accept="image/*, .txt, .pdf" style="display: none;">
-    <button onclick="document.getElementById('mobile-upload-btn').click()" 
-            style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%;">
-        + Upload File
-    </button>
 </div>
         <h3>☁ Cloud Directory</h3>
         
@@ -804,6 +798,35 @@
         
         if (data.author) authorTag.innerText = data.author;
     }
+    wrapper.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            wrapper.dataset.dragging = "false";
+            wrapper.releasePointerCapture(e.pointerId);
+            
+            const node = room.get('texts').get(activeFileId).get('data').get(textId);
+            node.get('x').put(parseFloat(wrapper.style.left));
+            node.get('y').put(parseFloat(wrapper.style.top));
+
+            // 🔥 DAGDAG DITO: I-trigger ang 50-second timer
+            // Paalala: Siguraduhing may variable kang naglalaman ng base64 ng litrato mo.
+            // Halimbawa: kung nasa file.src ang litrato, iyon ang ipasa mo.
+            const currentFileBase64 = filesMap[activeFileId].src; 
+            triggerCloudinaryAutoSave(currentFileBase64);
+        });
+        
+        editable.oninput = () => {
+            const node = room.get('texts').get(activeFileId).get('data').get(textId);
+            node.get('text').put(editable.innerText);
+            node.get('author').put(currentUser);
+            
+            room.get('files').get(activeFileId).get('lastEditedBy').put(currentUser);
+            room.get('files').get(activeFileId).get('time').put(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+            // 🔥 DAGDAG DITO: I-trigger ang timer habang nagta-type
+            const currentFileBase64 = filesMap[activeFileId].src; 
+            triggerCloudinaryAutoSave(currentFileBase64);
+        };
 
     function updateActiveTextStyleInstant() {
         const activeNode = document.querySelector('.text-block-wrapper.active');
@@ -959,25 +982,22 @@
         room.get('files').get(activeFileId).get('documentText').put(e.target.innerHTML);
     }
 });
-   document.getElementById('mobile-upload-btn').addEventListener('change', function(e) {
-    alert("Hakbang 1: Nakuha ang file mula sa phone.");
+    document.getElementById('resource-file-input').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-        alert("Error: Hindi ito imahe.");
+        alert("Paalala: Hindi ito isang imahe. Ika-crack nito ang system kung walang compression.");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = function(event) {
-        alert("Hakbang 2: Nabasa ng browser ang file.");
         const img = new Image();
         img.onload = function() {
-            alert("Hakbang 3: Sinisimulan ang compression...");
             try {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Ginawa nating 800 para mas sigurado
+                const MAX_WIDTH = 1000; 
                 let width = img.width;
                 let height = img.height;
 
@@ -992,8 +1012,7 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5); // Mas pinababa pa natin (0.5)
-                alert("Hakbang 4: Tagumpay ang compression! Ise-save na sa Gun.js...");
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
 
                 const newFileId = Gun.text.random(8);
                 const fileName = file.name;
@@ -1002,22 +1021,67 @@
                     id: newFileId,
                     src: compressedBase64,
                     name: fileName,
+                    author: currentUser || 'Anonymous',
                     timestamp: Date.now()
                 }, function(ack) {
-                    if(ack.err) {
-                        alert("Error sa pag-save: " + ack.err);
+                    if (ack.err) {
+                        console.error("Hindi naisave sa Gun.js:", ack.err);
                     } else {
-                        alert("Hakbang 5: 100% SUCCESS! Na-save sa database.");
+                        console.log("Success! Na-compress at na-save na ang file sa cloud directory.");
+                        if (typeof switchToFile === 'function') {
+                            switchToFile(newFileId);
+                        }
                     }
                 });
             } catch (error) {
-                alert("May nag-crash sa proseso: " + error.message);
+                console.error("May nag-error habang nag-co-compress ng litrato:", error);
             }
         };
         img.src = event.target.result;
     };
     reader.readAsDataURL(file);
 });
+
+    // Ilagay ang iyong Cloudinary details dito
+const CLD_CLOUD_NAME = 'dhv16wfu3'; 
+const CLD_UPLOAD_PRESET = 'Workspace-Storage';
+
+// Ito ang variable na hahawak sa ating 50-second timer
+let cloudinaryAutoSaveTimer; 
+
+// Function na mag-u-upload sa Cloudinary
+async function uploadToCloudinary(base64Image) {
+    console.log("Nag-a-auto save sa Cloudinary...");
+    
+    const url = `https://api.cloudinary.com/v1_1/${CLD_CLOUD_NAME}/image/upload`;
+    const formData = new FormData();
+    formData.append('file', base64Image);
+    formData.append('upload_preset', CLD_UPLOAD_PRESET);
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        console.log("Success! Naka-save na sa Cloud: ", data.secure_url);
+        
+        // Opsiyonal: Pwede mong i-save ang data.secure_url sa Gun.js 
+        // para yung cloud link na ang gamitin mo imbis na local file.
+    } catch (error) {
+        console.error("Sablay ang pag-upload sa Cloudinary:", error);
+    }
+}
+    function triggerCloudinaryAutoSave(currentImageBase64) {
+    // 1. Patayin ang lumang timer kung mayroon man
+    clearTimeout(cloudinaryAutoSaveTimer);
+    
+    // 2. Magsimula ng bagong timer na 50 segundo (50,000 milliseconds)
+    cloudinaryAutoSaveTimer = setTimeout(() => {
+        // 3. Kapag lumipas ang 50 segundo na walang galaw, i-upload na!
+        uploadToCloudinary(currentImageBase64);
+    }, 50000); // 50000 ms = 50 seconds
+}
 
 
 
