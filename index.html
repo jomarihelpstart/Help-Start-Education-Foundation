@@ -363,8 +363,8 @@
             <h3>🛠️ Style </h3>
             <div class="input-group">
                 <input type="color" id="textColor" value="#4f46e5" title="Text Color">
-                <input type="number" id="textSize" value="24" min="12" max="120" title="Font Size">
-            </div>
+                <input type="number" id="textSize" value="24" min="1" max="120" title="Font Size">
+            </div> <button id="addTextBtn" style="padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">+ Add Text</button>
             <div class="input-group">
                 <button class="btn outline" id="undoBtn" style="flex: 1;">↩️ Undo Text</button>
                 <button class="btn outline danger" id="deleteTextBtn" style="flex: 1;">🗑️ Delete</button>
@@ -847,22 +847,29 @@
         }
     };
 
-    els.imageContainer.onclick = (e) => {
-        if ((e.target === els.imageContainer || e.target === els.textLayer) && activeFileId) {
-            const rect = els.textLayer.getBoundingClientRect();
-            const textId = 'text_' + Date.now();
-            
-            room.get('texts').get(activeFileId).get('data').get(textId).put({
-                text: "Design Input...",
-                color: els.textColor.value,
-                size: els.textSize.value,
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top,
-                author: currentUser
-            });
-            myAddedTexts.push(textId);
-        }
-    };
+
+    document.getElementById('addTextBtn').onclick = () => {
+    
+    // Tinanggal na natin yung e.target checking dahil button na ang pinipindot natin
+    if (activeFileId) {
+        const textId = 'text_' + Date.now();
+
+        room.get('texts').get(activeFileId).get('data').get(textId).put({
+            text: "Design Input...",
+            color: els.textColor.value,
+            size: els.textsize.value,
+            // Pinalitan natin ang x at y. 
+            // Imbes na sumunod sa mouse click, ilalagay natin siya sa default na pwesto (halimbawa: 50px mula sa taas at kaliwa)
+            x: 50, 
+            y: 50,
+            author: currentUser
+        });
+        
+        myAddedTexts.push(textId);
+    } else {
+        alert("Pumili muna ng document bago mag-add ng text.");
+    }
+};
 
     els.undoBtn.onclick = () => {
         if (myAddedTexts.length > 0 && activeFileId) {
