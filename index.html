@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <head>
        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <meta charset="UTF-8">
@@ -427,9 +426,9 @@
 
     // MGA BAGONG MATITIBAY NA TULAY PARA SA LIVE SYNC
     const gun = Gun([
-        'http://localhost:8765/gun'
+        'http://localhost:8765/gun',
         'https://relay.peer.ooo/gun',
-        'https://gun-server.fly.dev/gun'
+        'https://gun-server.fly.dev/gun',
     ]);
     const room = gun.get('jomari_workspace_global_v4_stable');
 
@@ -446,7 +445,7 @@
         editorSelect: document.getElementById('editorSelect'),
         newEditorInput: document.getElementById('newEditorInput'),
         addEditorBtn: document.getElementById('addEditorBtn'),
-        fileUpload: document.getElementById(resource-file-input'),
+        fileUpload: document.getElementById('fileUpload'),
         imageContainer: document.getElementById('imageContainer'),
         mainImage: document.getElementById('mainImage'),
         textLayer: document.getElementById('textLayer'),
