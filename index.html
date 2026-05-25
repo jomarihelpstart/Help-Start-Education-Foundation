@@ -444,7 +444,7 @@
         editorSelect: document.getElementById('editorSelect'),
         newEditorInput: document.getElementById('newEditorInput'),
         addEditorBtn: document.getElementById('addEditorBtn'),
-        fileUpload: document.getElementById('fileUpload'),
+        fileUpload: document.getElementById(resource-file-input'),
         imageContainer: document.getElementById('imageContainer'),
         mainImage: document.getElementById('mainImage'),
         textLayer: document.getElementById('textLayer'),
@@ -1035,49 +1035,7 @@
         room.get('files').get(activeFileId).get('documentText').put(e.target.innerHTML);
     }
 });
-document.getElementById('resource-file-input').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    const reader = new FileReader();
-
-    // KUNG ANG IN-UPLOAD AY PDF
-    if (file.type === 'application/pdf') {
-        reader.onload = async function() {
-            const typedarray = new Uint8Array(this.result);
-            
-            // I-setup ang PDF.js
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-            
-            const pdf = await pdfjsLib.getDocument(typedarray).promise;
-            const page = await pdf.getPage(1); // Kunin ang unang pahina
-            
-            // Gawing high-resolution ang pagbasa sa PDF
-            const viewport = page.getViewport({ scale: 2.0 }); 
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            // I-render ang PDF sa canvas
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            
-            // Ilagay ang resulta sa mainImage mo para hindi masira ang dating flow ng workspace
-            document.getElementById('mainImage').src = canvas.toDataURL('image/png');
-        };
-        reader.readAsArrayBuffer(file);
-    } 
-    // KUNG ANG IN-UPLOAD AY LITRATO (JPG/PNG)
-    else if (file.type.match('image.*')) {
-        reader.onload = function(event) {
-            document.getElementById('mainImage').src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    } 
-    else {
-        alert("Paalala: Image o PDF file lamang ang pwede.");
-    }
-});
 
     // Ilagay ang iyong Cloudinary details dito
 const CLD_CLOUD_NAME = 'dhv16wfu3'; 
