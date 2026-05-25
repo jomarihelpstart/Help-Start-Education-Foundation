@@ -921,66 +921,85 @@
         els.mainImage.src = '';
         els.textLayer.innerHTML = '';
     }
-
-             function flattenImageWithText() {
+    document.getElementById('downloadBtn').addEventListener('click', flattenImageWithText);
+   
+    function flattenImageWithText() {
     const imageElement = document.getElementById('mainImage');
     const textElements = document.querySelectorAll('.text-editable');
 
     if (!imageElement) return alert('Walang background image na nakita.');
 
-    els.downloadBtn.innerText = 'Processing...';
+    // I-update ang button text kung sakali
+    if (typeof els !== 'undefined' && els.downloadBtn) {
+        els.downloadBtn.innerText = 'Processing...';
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = imageElement.naturalWidth;
     canvas.height = imageElement.naturalHeight;
     const ctx = canvas.getContext('2d');
 
+    // 1. I-draw ang background image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
+    // 2. Kunin ang ratio kung gaano pinaliit ang image sa screen mo
+    const imageRect = imageElement.getBoundingClientRect();
+    const scaleX = canvas.width / imageRect.width;
+    const scaleY = canvas.height / imageRect.height;
+
+    // 3. I-map at i-scale ang bawat text
     textElements.forEach(el => {
-        const parent = el.closest('.text-block-wrapper') || el; 
-        if (!el.innerText.trim()) return;
+        // Kunin ang mismong text
+        const textToDraw = el.innerText || el.value; 
+        if (!textToDraw || !textToDraw.trim()) return;
 
-        const imageRect = imageElement.getBoundingClientRect();
-        const parentRect = parent.getBoundingClientRect();
+        // Kunin ang eksaktong posisyon ng mismong text element sa screen
+        const elRect = el.getBoundingClientRect();
 
-        const widthRatio = canvas.width / imageRect.width;
-        const heightRatio = canvas.height / imageRect.height;
-
+        // Kunin ang computed style (font, color, atbp.)
         const computedStyle = window.getComputedStyle(el);
-        ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+
+        // KUNIN ANG FONT SIZE AT I-MULTIPLY SA SCALE RATIO (Ito ang solusyon sa malaking text)
+        const fontSizePx = parseFloat(computedStyle.fontSize);
+        const scaledFontSize = fontSizePx * scaleY; 
+
+        // I-set ang styles sa canvas
+        ctx.font = `${computedStyle.fontWeight} ${scaledFontSize}px ${computedStyle.fontFamily}`;
         ctx.fillStyle = computedStyle.color;
         ctx.textBaseline = 'top'; 
+        ctx.textAlign = 'left'; // Gamitin ang left dahil kinuha natin ang left edge ng bounding box
 
-        let x = (parentRect.left - imageRect.left) * widthRatio;
-        let y = (parentRect.top - imageRect.top) * heightRatio;
+        // Kalkulahin ang eksaktong X at Y
+        // (Posisyon ng text - Posisyon ng image) * Scale Ratio
+        let canvasX = (elRect.left - imageRect.left) * scaleX;
+        let canvasY = (elRect.top - imageRect.top) * scaleY;
 
-        if (computedStyle.textAlign === 'center') {
-            ctx.textAlign = 'center';
-            x += (parentRect.width / 2) * widthRatio;
-        } else if (computedStyle.textAlign === 'right') {
-            ctx.textAlign = 'right';
-            x += parentRect.width * widthRatio;
-        } else {
-            ctx.textAlign = 'left';
-        }
-
-        ctx.fillText(el.innerText, x, y);
+        // I-draw ang text sa tumpak na coordinates at laki
+        ctx.fillText(textToDraw.trim(), canvasX, canvasY);
     });
 
+    // 4. I-download ang resulta
     const link = document.createElement('a');
-    link.download = 'HSEF_Contract_Export.png';
-    link.href = canvas.toDataURL('image/png');
+    link.download = 'HSEF_Contract_Final.png';
+    link.href = canvas.toDataURL('image/png', 1.0); // 1.0 para sa pinakamataas na quality
     link.click();
     
-    els.downloadBtn.innerText = 'Download';
+    // Ibalik ang button text
+    if (typeof els !== 'undefined' && els.downloadBtn) {
+        els.downloadBtn.innerText = 'Download';
+    }
 }
 
-// Ikonekta ang function sa button mo
-els.downloadBtn.onclick = flattenImageWithText;
+// Siguraduhing nakakonekta ito sa button mo
+if (typeof els !== 'undefined' && els.downloadBtn) {
+    els.downloadBtn.onclick = flattenImageWithText;
+} else {
+    // Fallback kung sakaling hindi "els.downloadBtn" ang variable mo
+    const btn = document.getElementById('downloadBtn');
+    if (btn) btn.onclick = flattenImageWithText;
+}
 
     
-            
             exportContainer.appendChild(imgClone);
             exportContainer.appendChild(layerClone);
             document.body.appendChild(exportContainer);
