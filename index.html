@@ -929,7 +929,6 @@
 
     if (!imageElement) return alert('Walang background image na nakita.');
 
-    // I-update ang button text kung sakali
     if (typeof els !== 'undefined' && els.downloadBtn) {
         els.downloadBtn.innerText = 'Processing...';
     }
@@ -939,44 +938,64 @@
     canvas.height = imageElement.naturalHeight;
     const ctx = canvas.getContext('2d');
 
-    // 1. I-draw ang background image
+    // 1. I-draw ang background
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    // 2. Kunin ang ratio kung gaano pinaliit ang image sa screen mo
     const imageRect = imageElement.getBoundingClientRect();
     const scaleX = canvas.width / imageRect.width;
     const scaleY = canvas.height / imageRect.height;
 
-    // 3. I-map at i-scale ang bawat text
     textElements.forEach(el => {
-        // Kunin ang mismong text
         const textToDraw = el.innerText || el.value; 
         if (!textToDraw || !textToDraw.trim()) return;
 
-        // Kunin ang eksaktong posisyon ng mismong text element sa screen
         const elRect = el.getBoundingClientRect();
-
-        // Kunin ang computed style (font, color, atbp.)
         const computedStyle = window.getComputedStyle(el);
 
-        // KUNIN ANG FONT SIZE AT I-MULTIPLY SA SCALE RATIO (Ito ang solusyon sa malaking text)
         const fontSizePx = parseFloat(computedStyle.fontSize);
         const scaledFontSize = fontSizePx * scaleY; 
 
-        // I-set ang styles sa canvas
+        // I-set ang styles
         ctx.font = `${computedStyle.fontWeight} ${scaledFontSize}px ${computedStyle.fontFamily}`;
         ctx.fillStyle = computedStyle.color;
-        ctx.textBaseline = 'top'; 
-        ctx.textAlign = 'left'; // Gamitin ang left dahil kinuha natin ang left edge ng bounding box
+        
+        // ---------------------------------------------------------
+        // ANG SEKRETO: Gamitin ang Center-Point Alignment
+        // ---------------------------------------------------------
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-        // Kalkulahin ang eksaktong X at Y
-        // (Posisyon ng text - Posisyon ng image) * Scale Ratio
-        let canvasX = (elRect.left - imageRect.left) * scaleX;
-        let canvasY = (elRect.top - imageRect.top) * scaleY;
+        // Hanapin ang pinaka-sentro (X at Y) ng text box sa screen mo
+        const screenCenterX = elRect.left + (elRect.width / 2);
+        const screenCenterY = elRect.top + (elRect.height / 2);
 
-        // I-draw ang text sa tumpak na coordinates at laki
+        // I-map ang sentro na ito papunta sa malaking canvas
+        const canvasX = (screenCenterX - imageRect.left) * scaleX;
+        const canvasY = (screenCenterY - imageRect.top) * scaleY;
+
+        // I-draw ang text gamit ang nakuhang center points
         ctx.fillText(textToDraw.trim(), canvasX, canvasY);
     });
+
+    // 4. I-download ang resulta
+    const link = document.createElement('a');
+    link.download = 'HSEF_Contract_Final.png';
+    link.href = canvas.toDataURL('image/png', 1.0); 
+    link.click();
+    
+    // Ibalik ang button text
+    if (typeof els !== 'undefined' && els.downloadBtn) {
+        els.downloadBtn.innerText = 'Download';
+    }
+}
+
+// Siguraduhing nakakonekta
+if (typeof els !== 'undefined' && els.downloadBtn) {
+    els.downloadBtn.onclick = flattenImageWithText;
+} else {
+    const btn = document.getElementById('downloadBtn');
+    if (btn) btn.onclick = flattenImageWithText;
+}
 
     // 4. I-download ang resulta
     const link = document.createElement('a');
