@@ -552,11 +552,11 @@
         renderDirectory();
     });
 
-    els.fileUpload.onchange = async (e) => {
+        els.fileUpload.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        els.noFileText.innerText = "Processing & Uploading to Cloudinary (25GB Free Space)...";
+        els.noFileText.innerText = "Processing file... (Wait lang ha)";
         let rawSrc = "";
 
         if (file.type === 'application/pdf') {
@@ -566,14 +566,21 @@
                 const page = await pdf.getPage(1);
                 const viewport = page.getViewport({scale: 1.5});
                 const canvas = document.createElement('canvas');
-                canvas.height = viewport.height; canvas.width = viewport.width;
+                canvas.height = viewport.height; 
+                canvas.width = viewport.width;
                 await page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise;
                 rawSrc = canvas.toDataURL('image/png');
-            } catch (err) { return alert("PDF processing engine error."); }
+            } catch (err) { 
+                console.error("PDF Processing Error:", err);
+                alert("Hindi mabasa ng engine ang PDF. Baka corrupted o masyadong malaki.");
+                els.noFileText.innerText = "Select a live document from the right directory panel...";
+                return; 
+            }
         } else {
             rawSrc = await new Promise(r => { const reader = new FileReader(); reader.onload = e => r(e.target.result); reader.readAsDataURL(file); });
         }
 
+        els.noFileText.innerText = "Compressing & Uploading to Cloud (25GB Free Space)...";
         const optimizedSrc = await compressImage(rawSrc);
         const dateObj = new Date();
         const fId = 'file_' + Date.now();
@@ -601,11 +608,14 @@
                 });
                 els.fileUpload.value = "";
                 els.noFileText.innerText = "Upload Complete!";
+                
+                setTimeout(() => { switchToFile(fId); }, 500); 
             } else { throw new Error(data.error ? data.error.message : "Upload failed"); }
         } catch (error) {
             console.error("Cloudinary Upload Error:", error);
-            alert("Error sa pag-upload sa Cloudinary. Siguraduhing tama ang Cloud Name at Unsigned Upload Preset mo.");
-            resetWorkspace();
+            alert("Error sa pag-upload sa Cloudinary. Check mo yung console log.");
+            els.noFileText.innerText = "Upload Failed. Try again.";
+            els.fileUpload.value = "";
         }
     };
 
