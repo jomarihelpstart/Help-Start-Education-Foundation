@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Collaborative Workspace Pro (Cloudinary Edition)</title>
@@ -929,15 +931,14 @@
         els.textLayer.innerHTML = '';
     }
     document.getElementById('downloadBtn').addEventListener('click', flattenImageWithText);
-   
-    function flattenImageWithText() {
+   function flattenImageWithText() {
     const imageElement = document.getElementById('mainImage');
     const textElements = document.querySelectorAll('.text-editable');
 
-    if (!imageElement) return alert('Walang background image na nakita.');
+    if (!imageElement || !imageElement.src) return alert('Walang background na nakita.');
 
     if (typeof els !== 'undefined' && els.downloadBtn) {
-        els.downloadBtn.innerText = 'Processing...';
+        els.downloadBtn.innerText = 'Processing PDF...';
     }
 
     const canvas = document.createElement('canvas');
@@ -945,86 +946,53 @@
     canvas.height = imageElement.naturalHeight;
     const ctx = canvas.getContext('2d');
 
-    // 1. I-draw ang background
+    // 1. I-draw ang background (galing sa image o na-convert na PDF)
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
     const imageRect = imageElement.getBoundingClientRect();
     const scaleX = canvas.width / imageRect.width;
     const scaleY = canvas.height / imageRect.height;
 
+    // 2. I-draw ang mga text (same logic na gumana kanina)
     textElements.forEach(el => {
         const textToDraw = el.innerText || el.value; 
         if (!textToDraw || !textToDraw.trim()) return;
 
         const elRect = el.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(el);
+        const scaledFontSize = parseFloat(computedStyle.fontSize) * scaleY; 
 
-        const fontSizePx = parseFloat(computedStyle.fontSize);
-        const scaledFontSize = fontSizePx * scaleY; 
-
-        // I-set ang styles
         ctx.font = `${computedStyle.fontWeight} ${scaledFontSize}px ${computedStyle.fontFamily}`;
         ctx.fillStyle = computedStyle.color;
-        
-        // ---------------------------------------------------------
-        // ANG SEKRETO: Gamitin ang Center-Point Alignment
-        // ---------------------------------------------------------
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Hanapin ang pinaka-sentro (X at Y) ng text box sa screen mo
         const screenCenterX = elRect.left + (elRect.width / 2);
         const screenCenterY = elRect.top + (elRect.height / 2);
-
-        // I-map ang sentro na ito papunta sa malaking canvas
         const canvasX = (screenCenterX - imageRect.left) * scaleX;
         const canvasY = (screenCenterY - imageRect.top) * scaleY;
 
-        // I-draw ang text gamit ang nakuhang center points
         ctx.fillText(textToDraw.trim(), canvasX, canvasY);
     });
 
-    // 4. I-download ang resulta
-    const link = document.createElement('a');
-    link.download = 'HSEF_Contract_Final.png';
-    link.href = canvas.toDataURL('image/png', 1.0); 
-    link.click();
+    // 3. I-CONVERT AT I-DOWNLOAD BILANG PDF
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    const { jsPDF } = window.jspdf;
     
-    // Ibalik ang button text
+    // I-set ang sukat ng PDF kaparehas ng sukat ng canvas
+    const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+    });
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save('HSEF_Contract_Final.pdf');
+    
     if (typeof els !== 'undefined' && els.downloadBtn) {
         els.downloadBtn.innerText = 'Download';
     }
 }
-
-// Siguraduhing nakakonekta
-if (typeof els !== 'undefined' && els.downloadBtn) {
-    els.downloadBtn.onclick = flattenImageWithText;
-} else {
-    const btn = document.getElementById('downloadBtn');
-    if (btn) btn.onclick = flattenImageWithText;
-}
-
-    // 4. I-download ang resulta
-    const link = document.createElement('a');
-    link.download = 'HSEF_Contract_Final.png';
-    link.href = canvas.toDataURL('image/png', 1.0); // 1.0 para sa pinakamataas na quality
-    link.click();
-    
-    // Ibalik ang button text
-    if (typeof els !== 'undefined' && els.downloadBtn) {
-        els.downloadBtn.innerText = 'Download';
-    }
-}
-
-// Siguraduhing nakakonekta ito sa button mo
-if (typeof els !== 'undefined' && els.downloadBtn) {
-    els.downloadBtn.onclick = flattenImageWithText;
-} else {
-    // Fallback kung sakaling hindi "els.downloadBtn" ang variable mo
-    const btn = document.getElementById('downloadBtn');
-    if (btn) btn.onclick = flattenImageWithText;
-}
-
     
             exportContainer.appendChild(imgClone);
             exportContainer.appendChild(layerClone);
@@ -1059,64 +1027,48 @@ if (typeof els !== 'undefined' && els.downloadBtn) {
         room.get('files').get(activeFileId).get('documentText').put(e.target.innerHTML);
     }
 });
-    document.getElementById('resource-file-input').addEventListener('change', function(e) {
+document.getElementById('resource-file-input').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-        alert("Paalala: Hindi ito isang imahe. Ika-crack nito ang system kung walang compression.");
-        return;
-    }
-
     const reader = new FileReader();
-    reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-            try {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1000; 
-                let width = img.width;
-                let height = img.height;
 
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
-                const newFileId = Gun.text.random(8);
-                const fileName = file.name;
-
-                room.get('files').get(newFileId).put({
-                    id: newFileId,
-                    src: compressedBase64,
-                    name: fileName,
-                    author: currentUser || 'Anonymous',
-                    timestamp: Date.now()
-                }, function(ack) {
-                    if (ack.err) {
-                        console.error("Hindi naisave sa Gun.js:", ack.err);
-                    } else {
-                        console.log("Success! Na-compress at na-save na ang file sa cloud directory.");
-                        if (typeof switchToFile === 'function') {
-                            switchToFile(newFileId);
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("May nag-error habang nag-co-compress ng litrato:", error);
-            }
+    // KUNG ANG IN-UPLOAD AY PDF
+    if (file.type === 'application/pdf') {
+        reader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            
+            // I-setup ang PDF.js
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            const page = await pdf.getPage(1); // Kunin ang unang pahina
+            
+            // Gawing high-resolution ang pagbasa sa PDF
+            const viewport = page.getViewport({ scale: 2.0 }); 
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            // I-render ang PDF sa canvas
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            // Ilagay ang resulta sa mainImage mo para hindi masira ang dating flow ng workspace
+            document.getElementById('mainImage').src = canvas.toDataURL('image/png');
         };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+        reader.readAsArrayBuffer(file);
+    } 
+    // KUNG ANG IN-UPLOAD AY LITRATO (JPG/PNG)
+    else if (file.type.match('image.*')) {
+        reader.onload = function(event) {
+            document.getElementById('mainImage').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    } 
+    else {
+        alert("Paalala: Image o PDF file lamang ang pwede.");
+    }
 });
 
     // Ilagay ang iyong Cloudinary details dito
