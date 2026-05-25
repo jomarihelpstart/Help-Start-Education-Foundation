@@ -922,33 +922,64 @@
         els.textLayer.innerHTML = '';
     }
 
+             function flattenImageWithText() {
+    const imageElement = document.getElementById('mainImage');
+    const textElements = document.querySelectorAll('.text-editable');
+
+    if (!imageElement) return alert('Walang background image na nakita.');
+
+    els.downloadBtn.innerText = 'Processing...';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = imageElement.naturalWidth;
+    canvas.height = imageElement.naturalHeight;
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+
+    textElements.forEach(el => {
+        const parent = el.closest('.text-block-wrapper') || el; 
+        if (!el.innerText.trim()) return;
+
+        const imageRect = imageElement.getBoundingClientRect();
+        const parentRect = parent.getBoundingClientRect();
+
+        const widthRatio = canvas.width / imageRect.width;
+        const heightRatio = canvas.height / imageRect.height;
+
+        const computedStyle = window.getComputedStyle(el);
+        ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+        ctx.fillStyle = computedStyle.color;
+        ctx.textBaseline = 'top'; 
+
+        let x = (parentRect.left - imageRect.left) * widthRatio;
+        let y = (parentRect.top - imageRect.top) * heightRatio;
+
+        if (computedStyle.textAlign === 'center') {
+            ctx.textAlign = 'center';
+            x += (parentRect.width / 2) * widthRatio;
+        } else if (computedStyle.textAlign === 'right') {
+            ctx.textAlign = 'right';
+            x += parentRect.width * widthRatio;
+        } else {
+            ctx.textAlign = 'left';
+        }
+
+        ctx.fillText(el.innerText, x, y);
+    });
+
+    const link = document.createElement('a');
+    link.download = 'HSEF_Contract_Export.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
     
-    els.downloadBtn.onclick = async () => {
-        if (!activeFileId) return alert('Pumili muna ng document bago mag-export.');
-        els.downloadBtn.innerText = 'Processing...';
-        
-        try {
-            const exportContainer = document.createElement('div');
-            exportContainer.style.position = 'absolute';
-            exportContainer.style.left = '-9999px';
-            exportContainer.style.display = 'inline-block';
-            exportContainer.style.background = 'white';
-            
-            const imgClone = document.createElement('img');
-            imgClone.src = els.mainImage.src;
-            imgClone.crossOrigin = 'anonymous';
-            
-            const layerClone = els.textLayer.cloneNode(true);
-            layerClone.querySelectorAll('.text-block-wrapper').forEach(el => {
-                el.classList.remove('active');
-                const editable = el.querySelector('.text-editable');
-                if (editable) {
-                    editable.style.border = 'none';
-                    editable.style.background = 'transparent';
-                }
-                const author = el.querySelector('.text-author');
-                if (author) author.style.display = 'none';
-            });
+    els.downloadBtn.innerText = 'Download';
+}
+
+// Ikonekta ang function sa button mo
+els.downloadBtn.onclick = flattenImageWithText;
+
+    
             
             exportContainer.appendChild(imgClone);
             exportContainer.appendChild(layerClone);
@@ -1083,6 +1114,8 @@ async function uploadToCloudinary(base64Image) {
         uploadToCloudinary(currentImageBase64);
     }, 50000); // 50000 ms = 50 seconds
 }
+
+    
 
 
 
